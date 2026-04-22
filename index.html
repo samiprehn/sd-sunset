@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SD Sunset Tonight</title>
+<meta name="description" content="Tonight's San Diego sunset, ranked by cloud cover across seven viewpoints.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌅</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-top: #0d0614;
+    --bg-mid: #2a1024;
+    --bg-low: #5a1a2a;
+    --bg-horizon: #a33a38;
+    --text: #fef3e6;
+    --text-dim: rgba(254, 243, 230, 0.5);
+    --text-faint: rgba(254, 243, 230, 0.3);
+    --card: rgba(255, 255, 255, 0.04);
+    --card-hover: rgba(255, 255, 255, 0.07);
+    --border: rgba(255, 255, 255, 0.08);
+    --gold: #f5c860;
+    --coral: #f27c7c;
+    --slate: #9aa3b2;
+    --stone: #6a707a;
+  }
+
+  html, body { min-height: 100%; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--text);
+    background: linear-gradient(180deg,
+      var(--bg-top) 0%,
+      var(--bg-mid) 35%,
+      var(--bg-low) 70%,
+      var(--bg-horizon) 100%);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.035;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 34rem;
+    margin: 0 auto;
+    padding: 3.5rem 1.25rem 2rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .eyebrow {
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 0.9rem;
+  }
+
+  .time {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: clamp(3.5rem, 15vw, 5.5rem);
+    font-weight: 400;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    background: linear-gradient(175deg, #fef3e6 0%, #fcdca6 40%, var(--gold) 80%, var(--coral) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .countdown {
+    font-size: 0.85rem;
+    color: var(--text-faint);
+    margin-top: 1rem;
+    letter-spacing: 0.02em;
+  }
+
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .spot {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.5rem 1.25rem;
+    padding: 1rem 1.25rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 0.85rem;
+    transition: background 0.15s, transform 0.15s, border-color 0.15s;
+  }
+
+  .spot:hover {
+    background: var(--card-hover);
+    transform: translateY(-1px);
+  }
+
+  .spot.top {
+    background: linear-gradient(135deg, rgba(245, 200, 96, 0.12) 0%, rgba(245, 200, 96, 0.03) 100%);
+    border-color: rgba(245, 200, 96, 0.28);
+    box-shadow: 0 4px 24px rgba(245, 200, 96, 0.08);
+  }
+
+  .spot-name {
+    font-weight: 500;
+    font-size: 1rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .pill {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.22rem 0.55rem;
+    border-radius: 999px;
+  }
+
+  .pill-gold  { background: rgba(245, 200, 96, 0.15);  color: var(--gold); }
+  .pill-coral { background: rgba(242, 124, 124, 0.15); color: var(--coral); }
+  .pill-slate { background: rgba(154, 163, 178, 0.15); color: var(--slate); }
+  .pill-stone { background: rgba(106, 112, 122, 0.20); color: var(--stone); }
+
+  .directions {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    text-decoration: none;
+  }
+
+  .directions:hover { color: var(--text); }
+
+  .cloud {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 1.75rem;
+    font-weight: 500;
+    line-height: 1;
+    color: rgba(254, 243, 230, 0.88);
+    text-align: right;
+  }
+
+  .cloud-unit {
+    font-size: 0.6em;
+    color: var(--text-faint);
+    margin-left: 0.1em;
+  }
+
+  .status {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-dim);
+    font-size: 0.95rem;
+  }
+
+  .status.error { color: var(--coral); }
+
+  footer {
+    margin-top: 3rem;
+    text-align: center;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    color: var(--text-faint);
+  }
+
+  .caveat {
+    margin-bottom: 1.5rem;
+  }
+
+  .bmc {
+    color: var(--text-dim);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .bmc:hover { color: var(--text); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .spot { animation: fadeUp 0.45s ease-out both; }
+  .spot:nth-child(1) { animation-delay: 0.00s; }
+  .spot:nth-child(2) { animation-delay: 0.04s; }
+  .spot:nth-child(3) { animation-delay: 0.08s; }
+  .spot:nth-child(4) { animation-delay: 0.12s; }
+  .spot:nth-child(5) { animation-delay: 0.16s; }
+  .spot:nth-child(6) { animation-delay: 0.20s; }
+  .spot:nth-child(7) { animation-delay: 0.24s; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="eyebrow" id="eyebrow">Sunset Tonight</div>
+      <div class="time" id="time">—</div>
+      <div class="countdown" id="countdown"></div>
+    </header>
+    <div class="list" id="list">
+      <div class="status">Loading forecast…</div>
+    </div>
+    <footer>
+      <p class="caveat">
+        Spots ranked by how close forecast cloud cover is to 40% at sunset — the sweet spot where clouds catch color without blocking the sun. NWS reports a single total cloud number, so this can't tell low from mid from high clouds, which is what really drives sunset color. Heuristic only.
+      </p>
+      <a class="bmc" href="https://buymeacoffee.com/samiprehn" target="_blank" rel="noopener">Keep this page running</a>
+    </footer>
+  </div>
+
+<script>
+const SPOTS = [
+  { name: 'Sunset Cliffs',             grid: 'SGX/53,14', lat: 32.7157, lon: -117.2542 },
+  { name: 'Torrey Pines Gliderport',   grid: 'SGX/55,22', lat: 32.8906, lon: -117.2528 },
+  { name: 'Mt Soledad',                grid: 'SGX/54,20', lat: 32.8403, lon: -117.2506 },
+  { name: 'Coronado Ferry Landing',    grid: 'SGX/56,13', lat: 32.6943, lon: -117.1744 },
+  { name: 'OB Pier',                   grid: 'SGX/53,16', lat: 32.7471, lon: -117.2566 },
+  { name: 'La Jolla Cove',             grid: 'SGX/54,20', lat: 32.8511, lon: -117.2716 },
+  { name: 'Cabrillo National Monument',grid: 'SGX/53,13', lat: 32.6722, lon: -117.2417 },
+];
+
+const SD_LAT = 32.72, SD_LON = -117.22;
+
+function verdictFor(cloud) {
+  if (cloud < 20) return { label: 'Clear & golden', klass: 'pill-gold' };
+  if (cloud < 65) return { label: 'Great for color', klass: 'pill-coral' };
+  if (cloud < 90) return { label: 'Hazy',            klass: 'pill-slate' };
+  return              { label: 'Socked in',          klass: 'pill-stone' };
+}
+
+function parseDuration(iso) {
+  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+  if (!m) return 0;
+  const hours = parseInt(m[1] || '0', 10);
+  const mins  = parseInt(m[2] || '0', 10);
+  return (hours * 60 + mins) * 60 * 1000;
+}
+
+function cloudAtTime(values, target) {
+  for (const entry of values) {
+    const [startStr, durStr] = entry.validTime.split('/');
+    const start = new Date(startStr);
+    const end   = new Date(start.getTime() + parseDuration(durStr));
+    if (target >= start && target < end) return entry.value;
+  }
+  return null;
+}
+
+function formatTime(d) {
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+function formatCountdown(sunset, now) {
+  const diffMs = sunset - now;
+  if (diffMs <= 0) return '';
+  const h = Math.floor(diffMs / 3600000);
+  const m = Math.floor((diffMs % 3600000) / 60000);
+  if (h > 0) return `in ${h}h ${m}m`;
+  if (m > 0) return `in ${m} min`;
+  return 'any moment now';
+}
+
+function weekdayName(d) {
+  return d.toLocaleDateString('en-US', { weekday: 'long' });
+}
+
+async function fetchSunset(dateStr) {
+  const r = await fetch(`https://api.sunrise-sunset.org/json?lat=${SD_LAT}&lng=${SD_LON}&date=${dateStr}&formatted=0`);
+  if (!r.ok) throw new Error(`sunrise-sunset: ${r.status}`);
+  const data = await r.json();
+  return new Date(data.results.sunset);
+}
+
+async function fetchGrid(gridKey) {
+  const r = await fetch(`https://api.weather.gov/gridpoints/${gridKey}`);
+  if (!r.ok) throw new Error(`NWS ${gridKey}: ${r.status}`);
+  const data = await r.json();
+  return data.properties.skyCover.values;
+}
+
+function isoDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+async function load() {
+  const now = new Date();
+  let sunsetTime = await fetchSunset(isoDate(now));
+  let eyebrow = 'Sunset Tonight';
+
+  if (now >= sunsetTime) {
+    const tomorrow = new Date(now.getTime() + 86400000);
+    sunsetTime = await fetchSunset(isoDate(tomorrow));
+    eyebrow = `Sunset ${weekdayName(sunsetTime)}`;
+  }
+
+  document.getElementById('eyebrow').textContent = eyebrow;
+  document.getElementById('time').textContent = formatTime(sunsetTime);
+  document.getElementById('countdown').textContent = formatCountdown(sunsetTime, now);
+
+  const uniqueGrids = [...new Set(SPOTS.map(s => s.grid))];
+  const gridResults = await Promise.all(uniqueGrids.map(fetchGrid));
+  const gridMap = Object.fromEntries(uniqueGrids.map((g, i) => [g, gridResults[i]]));
+
+  const spots = SPOTS
+    .map(s => ({ ...s, cloud: cloudAtTime(gridMap[s.grid], sunsetTime) }))
+    .filter(s => s.cloud !== null)
+    .map(s => ({ ...s, verdict: verdictFor(s.cloud) }))
+    .sort((a, b) => Math.abs(a.cloud - 40) - Math.abs(b.cloud - 40));
+
+  const listEl = document.getElementById('list');
+  if (spots.length === 0) {
+    listEl.innerHTML = `<div class="status">No cloud forecast available for sunset yet — check back later.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = spots.map((s, i) => {
+    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}`;
+    return `
+      <article class="spot${i === 0 ? ' top' : ''}">
+        <div>
+          <div class="spot-name">${s.name}</div>
+          <div class="meta">
+            <span class="pill ${s.verdict.klass}">${s.verdict.label}</span>
+            <a class="directions" href="${mapUrl}" target="_blank" rel="noopener">Directions ↗</a>
+          </div>
+        </div>
+        <div class="cloud">${s.cloud}<span class="cloud-unit">%</span></div>
+      </article>
+    `;
+  }).join('');
+}
+
+load().catch(err => {
+  console.error(err);
+  document.getElementById('list').innerHTML = `
+    <div class="status error">
+      Couldn't load the forecast. The weather service may be having a moment — try refreshing in a bit.
+    </div>
+  `;
+});
+</script>
+</body>
+</html>
