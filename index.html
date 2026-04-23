@@ -158,6 +158,17 @@
   }
   .pin:hover { transform: scale(1.18); }
 
+  .pin-label {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    fill: #1e3448;
+    stroke: rgba(255, 255, 255, 0.7);
+    stroke-width: 3px;
+    paint-order: stroke;
+    cursor: pointer;
+  }
+
   .spot-card.flash {
     animation: flash 1.2s ease-out;
   }
@@ -621,6 +632,11 @@ function projectLatLon(lat, lon) {
   };
 }
 
+// Per-spot label placement overrides when the default (right of pin) doesn't fit.
+const LABEL_POS = {
+  'Mt Helix': 'left',       // too close to right edge of map
+};
+
 function renderMap(spots) {
   const pinsEl = document.getElementById('mapPins');
   pinsEl.innerHTML = spots.map((s, i) => {
@@ -631,6 +647,12 @@ function renderMap(spots) {
     const glow = isTop
       ? `<circle cx="${p.x}" cy="${p.y}" r="${r * 1.8}" fill="${color}" opacity="0.25" filter="url(#pin-glow)"/>`
       : '';
+
+    const pos = LABEL_POS[s.name] || (p.x > 600 ? 'left' : 'right');
+    const gap = isTop ? 30 : 20;
+    const labelX = pos === 'left' ? p.x - gap : p.x + gap;
+    const anchor = pos === 'left' ? 'end' : 'start';
+
     return `
       ${glow}
       <circle class="pin" cx="${p.x}" cy="${p.y}" r="${r}"
@@ -639,17 +661,20 @@ function renderMap(spots) {
               data-idx="${i}">
         <title>${s.name} — ${s.verdict.label}</title>
       </circle>
+      <text class="pin-label" x="${labelX}" y="${p.y}"
+            text-anchor="${anchor}" dominant-baseline="middle"
+            data-idx="${i}">${s.name}</text>
     `;
   }).join('');
 
-  pinsEl.querySelectorAll('.pin').forEach(el => {
+  pinsEl.querySelectorAll('.pin, .pin-label').forEach(el => {
     el.addEventListener('click', () => {
       const idx = el.getAttribute('data-idx');
       const card = document.getElementById(`spot-${idx}`);
       if (!card) return;
       card.scrollIntoView({ behavior: 'smooth', block: 'center' });
       card.classList.remove('flash');
-      void card.offsetWidth; // restart animation
+      void card.offsetWidth;
       card.classList.add('flash');
     });
   });
