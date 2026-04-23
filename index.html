@@ -8,7 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌅</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -24,7 +24,8 @@
     --card-hover: rgba(255, 255, 255, 0.07);
     --border: rgba(255, 255, 255, 0.08);
     --gold: #f5c860;
-    --coral: #f27c7c;
+    --coral: #f58a4e;
+    --rose: #e85a99;
     --slate: #9aa3b2;
     --stone: #6a707a;
   }
@@ -77,11 +78,11 @@
   }
 
   .time {
-    font-family: 'Fraunces', Georgia, serif;
-    font-size: clamp(3.5rem, 15vw, 5.5rem);
-    font-weight: 400;
-    line-height: 0.95;
-    letter-spacing: -0.02em;
+    font-size: clamp(3.25rem, 14vw, 5rem);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.035em;
+    font-feature-settings: "tnum", "ss01";
     background: linear-gradient(175deg, #fef3e6 0%, #fcdca6 40%, var(--gold) 80%, var(--coral) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -93,6 +94,112 @@
     color: var(--text-faint);
     margin-top: 1rem;
     letter-spacing: 0.02em;
+  }
+
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  @media (min-width: 720px) {
+    .container { max-width: 58rem; }
+    .main-grid {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+      gap: 2rem;
+      align-items: start;
+    }
+  }
+
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .map {
+    border: 1px solid var(--border);
+    border-radius: 0.85rem;
+    overflow: hidden;
+    background: var(--card);
+    animation: fadeUp 0.55s ease-out both;
+  }
+
+  .map-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 1rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .map-attrib {
+    font-size: 0.65rem;
+    color: var(--text-faint);
+    letter-spacing: 0.1em;
+  }
+
+  .map-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .pin {
+    transition: transform 0.18s ease-out;
+    transform-box: fill-box;
+    transform-origin: center;
+    cursor: pointer;
+  }
+  .pin:hover { transform: scale(1.18); }
+
+  .spot-card.flash {
+    animation: flash 1.2s ease-out;
+  }
+  @keyframes flash {
+    0%   { box-shadow: 0 0 0 0 rgba(245, 200, 96, 0); }
+    20%  { box-shadow: 0 0 0 4px rgba(245, 200, 96, 0.35); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 200, 96, 0); }
+  }
+
+  .sky-now {
+    border: 1px solid var(--border);
+    border-radius: 0.85rem;
+    overflow: hidden;
+    background: var(--card);
+    animation: fadeUp 0.5s ease-out both;
+  }
+
+  .sky-now-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 1rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sky-now-attrib {
+    font-size: 0.65rem;
+    color: var(--text-faint);
+    letter-spacing: 0.1em;
+  }
+
+  .sky-now-crop {
+    aspect-ratio: 3 / 2;
+    background-color: #000;
+    background-repeat: no-repeat;
+    background-size: 400%;
+    background-position: 73% 85%;
   }
 
   .list {
@@ -148,7 +255,8 @@
   }
 
   .pill-gold  { background: rgba(245, 200, 96, 0.15);  color: var(--gold); }
-  .pill-coral { background: rgba(242, 124, 124, 0.15); color: var(--coral); }
+  .pill-coral { background: rgba(245, 138, 78, 0.16);  color: var(--coral); }
+  .pill-rose  { background: rgba(232, 90, 153, 0.18);  color: var(--rose); }
   .pill-slate { background: rgba(154, 163, 178, 0.15); color: var(--slate); }
   .pill-stone { background: rgba(106, 112, 122, 0.20); color: var(--stone); }
 
@@ -161,10 +269,11 @@
   .directions:hover { color: var(--text); }
 
   .cloud {
-    font-family: 'Fraunces', Georgia, serif;
-    font-size: 1.75rem;
-    font-weight: 500;
+    font-size: 1.6rem;
+    font-weight: 600;
     line-height: 1;
+    letter-spacing: -0.02em;
+    font-feature-settings: "tnum";
     color: rgba(254, 243, 230, 0.88);
     text-align: right;
   }
@@ -216,6 +325,8 @@
   .spot:nth-child(5) { animation-delay: 0.16s; }
   .spot:nth-child(6) { animation-delay: 0.20s; }
   .spot:nth-child(7) { animation-delay: 0.24s; }
+  .spot:nth-child(8) { animation-delay: 0.28s; }
+  .spot:nth-child(9) { animation-delay: 0.32s; }
 </style>
 </head>
 <body>
@@ -225,26 +336,117 @@
       <div class="time" id="time">—</div>
       <div class="countdown" id="countdown"></div>
     </header>
-    <div class="list" id="list">
-      <div class="status">Loading forecast…</div>
+    <div class="main-grid">
+      <div class="list" id="list">
+        <div class="status">Loading forecast…</div>
+      </div>
+      <aside class="side">
+        <section class="sky-now">
+          <div class="sky-now-label">
+            <span>Sky right now</span>
+            <span class="sky-now-attrib">GOES-18 · Pacific SW</span>
+          </div>
+          <div class="sky-now-crop" id="satImg" role="img" aria-label="Live GOES-18 satellite view centered on San Diego — the marine layer and cloud pattern over the SoCal coast, updated every ~10 minutes."></div>
+        </section>
+        <section class="map">
+          <div class="map-label">
+            <span>Where they are</span>
+            <span class="map-attrib">Tap a pin</span>
+          </div>
+          <svg class="map-svg" viewBox="0 0 740 1000" id="mapSvg" aria-label="Stylized map of San Diego viewpoints">
+            <defs>
+              <filter id="pin-glow" x="-60%" y="-60%" width="220%" height="220%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="8"/>
+              </filter>
+            </defs>
+
+            <!-- Water: Pacific + bays fill the tile in sky blue; land gets painted over -->
+            <rect width="740" height="1000" fill="#9dc9de"/>
+
+            <!-- Mainland + Point Loma as one continuous shape, traced roughly from OSM: Pacific coast
+                 north-to-south, wrapping a narrow Point Loma peninsula, then back up the east side of
+                 SD Bay through downtown / National City, and out east to the map edge. -->
+            <path fill="#c3dfb5" d="
+              M 55 0
+              Q 65 30 78 65
+              Q 100 115 120 160
+              Q 140 200 150 240
+              Q 155 290 155 335
+              Q 165 375 180 420
+              Q 188 460 190 490
+              Q 175 520 165 555
+              Q 135 575 120 600
+              Q 128 635 150 660
+              Q 170 688 178 718
+              Q 180 748 190 775
+              Q 180 805 188 840
+              Q 178 865 184 895
+              Q 188 940 208 970
+              L 212 988
+              L 234 988
+              Q 244 962 242 918
+              Q 242 882 236 862
+              Q 240 848 264 848
+              L 308 858
+              L 362 878
+              L 396 900
+              L 420 942
+              L 450 988
+              L 500 1000
+              L 740 1000
+              L 740 0
+              Z
+            "/>
+
+            <!-- Mission Bay (water pocket cut into mainland — roughly 2mi across in reality) -->
+            <ellipse cx="224" cy="750" rx="38" ry="32" fill="#9dc9de"/>
+
+            <!-- Coronado — half-dome shape with the curved side up, flat bottom -->
+            <path fill="#c3dfb5" d="
+              M 292 962
+              A 40 54 0 0 1 372 962
+              Z
+            "/>
+
+            <!-- Silver Strand trailing south off the bottom-right corner of Coronado -->
+            <path fill="#c3dfb5" d="
+              M 372 962
+              L 378 1000
+              L 362 1000
+              L 358 962
+              Z
+            "/>
+
+            <text x="32" y="36" fill="rgba(30, 52, 72, 0.7)" font-size="18" font-family="Inter, sans-serif" font-weight="500" letter-spacing="2">↑ N</text>
+            <text x="40" y="992" fill="rgba(30, 52, 72, 0.45)" font-size="14" font-family="Inter, sans-serif" letter-spacing="3">PACIFIC</text>
+            <g id="mapPins"></g>
+          </svg>
+        </section>
+      </aside>
     </div>
     <footer>
       <p class="caveat">
-        Spots ranked by how close forecast cloud cover is to 40% at sunset — the sweet spot where clouds catch color without blocking the sun. NWS reports a single total cloud number, so this can't tell low from mid from high clouds, which is what really drives sunset color. Heuristic only.
+        Ranked by forecast cloud cover at sunset (aiming for ~40% — the sweet spot) with layered cloud data from the nearest airport's TAF. Low thick clouds below 3,000 ft get flagged as a marine-layer risk and pushed down the list. High cirrus gets a small boost since those clouds catch the best pink color. Heuristic only — the real answer is to just go outside and look.
       </p>
       <a class="bmc" href="https://buymeacoffee.com/samiprehn" target="_blank" rel="noopener">Keep this page running</a>
     </footer>
   </div>
 
 <script>
+// `grid` is the NWS SGX gridpoint for the viewpoint's lat/lon (hardcoded to skip /points/ lookups).
+// `taf`  is the nearest airport with a published TAF — used for layered cloud forecasts.
+// `place` is a Google-Maps-searchable destination for the directions link.
+// `lat`/`lon` are used to project each spot onto the stylized SVG map.
 const SPOTS = [
-  { name: 'Sunset Cliffs',             grid: 'SGX/53,14', lat: 32.7157, lon: -117.2542 },
-  { name: 'Torrey Pines Gliderport',   grid: 'SGX/55,22', lat: 32.8906, lon: -117.2528 },
-  { name: 'Mt Soledad',                grid: 'SGX/54,20', lat: 32.8403, lon: -117.2506 },
-  { name: 'Coronado Ferry Landing',    grid: 'SGX/56,13', lat: 32.6943, lon: -117.1744 },
-  { name: 'OB Pier',                   grid: 'SGX/53,16', lat: 32.7471, lon: -117.2566 },
-  { name: 'La Jolla Cove',             grid: 'SGX/54,20', lat: 32.8511, lon: -117.2716 },
-  { name: 'Cabrillo National Monument',grid: 'SGX/53,13', lat: 32.6722, lon: -117.2417 },
+  { name: 'Sunset Cliffs',              grid: 'SGX/53,14', taf: 'KSAN', lat: 32.7157, lon: -117.2542, place: 'Sunset Cliffs Natural Park Parking, San Diego, CA' },
+  { name: 'Torrey Pines Gliderport',    grid: 'SGX/55,22', taf: 'KNKX', lat: 32.8906, lon: -117.2528, place: 'Torrey Pines Gliderport, 2800 Torrey Pines Scenic Dr, La Jolla, CA' },
+  { name: 'Mt Soledad',                 grid: 'SGX/54,20', taf: 'KSAN', lat: 32.8403, lon: -117.2506, place: 'Mt Soledad National Veterans Memorial Parking, La Jolla, CA' },
+  { name: 'Coronado Beach',             grid: 'SGX/56,13', taf: 'KNZY', lat: 32.6956, lon: -117.1861, place: 'Coronado Dog Beach, Coronado, CA' },
+  { name: 'Ocean Beach',                grid: 'SGX/54,16', taf: 'KSAN', lat: 32.7521, lon: -117.2522, place: 'Ocean Beach Dog Beach Parking Lot, Voltaire St, San Diego, CA' },
+  { name: 'La Jolla Shores',            grid: 'SGX/54,21', taf: 'KSAN', lat: 32.8571, lon: -117.2573, place: 'Kellogg Park, La Jolla Shores Beach, La Jolla, CA' },
+  { name: 'Presidio Park',              grid: 'SGX/56,16', taf: 'KSAN', lat: 32.7583, lon: -117.1977, place: 'Junípero Serra Museum, San Diego, CA' },
+  { name: 'Mt Helix',                   grid: 'SGX/63,15', taf: 'KNKX', lat: 32.7659, lon: -116.9990, place: 'Mt Helix Park, La Mesa, CA' },
+  { name: 'Ponto Beach',                grid: 'SGX/54,31', taf: 'KCRQ', lat: 33.0760, lon: -117.3110, place: 'Ponto Beach, Carlsbad, CA' },
 ];
 
 const SD_LAT = 32.72, SD_LON = -117.22;
@@ -257,14 +459,15 @@ function verdictFor(cloud) {
 }
 
 function parseDuration(iso) {
-  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+  const m = iso.match(/P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?/);
   if (!m) return 0;
-  const hours = parseInt(m[1] || '0', 10);
-  const mins  = parseInt(m[2] || '0', 10);
-  return (hours * 60 + mins) * 60 * 1000;
+  const days  = parseInt(m[1] || '0', 10);
+  const hours = parseInt(m[2] || '0', 10);
+  const mins  = parseInt(m[3] || '0', 10);
+  return ((days * 24 + hours) * 60 + mins) * 60 * 1000;
 }
 
-function cloudAtTime(values, target) {
+function valueAtTime(values, target) {
   for (const entry of values) {
     const [startStr, durStr] = entry.validTime.split('/');
     const start = new Date(startStr);
@@ -272,6 +475,29 @@ function cloudAtTime(values, target) {
     if (target >= start && target < end) return entry.value;
   }
   return null;
+}
+
+const COVERAGE_PREFIX = {
+  patchy: 'Patchy', areas: 'Areas of', scattered: 'Scattered',
+  isolated: 'Isolated', widespread: 'Widespread', brief: 'Brief',
+  chance: 'Chance of', likely: 'Likely', slight_chance: 'Slight chance of',
+  intermittent: 'Intermittent', numerous: 'Numerous', frequent: 'Frequent',
+  occasional: 'Occasional', periods: 'Periods of', few: 'Few',
+};
+
+function formatWeather(w) {
+  const wx = (w.weather || '').replace(/_/g, ' ');
+  if (!w.coverage || w.coverage === 'definite') {
+    return wx.charAt(0).toUpperCase() + wx.slice(1);
+  }
+  const prefix = COVERAGE_PREFIX[w.coverage] || w.coverage;
+  return `${prefix} ${wx}`;
+}
+
+function blockingWeather(weatherVal) {
+  if (!Array.isArray(weatherVal)) return null;
+  const blockers = weatherVal.filter(w => w && w.weather);
+  return blockers.length ? blockers[0] : null;
 }
 
 function formatTime(d) {
@@ -303,7 +529,68 @@ async function fetchGrid(gridKey) {
   const r = await fetch(`https://api.weather.gov/gridpoints/${gridKey}`);
   if (!r.ok) throw new Error(`NWS ${gridKey}: ${r.status}`);
   const data = await r.json();
-  return data.properties.skyCover.values;
+  const props = data.properties || {};
+  return {
+    skyCover: (props.skyCover && props.skyCover.values) || [],
+    weather:  (props.weather  && props.weather.values)  || [],
+  };
+}
+
+const TAF_WORKER = 'https://sd-sunset-taf.sami-prehn.workers.dev';
+
+async function fetchTAFs(stations) {
+  try {
+    const r = await fetch(`${TAF_WORKER}/?ids=${stations.join(',')}`);
+    if (!r.ok) throw new Error(`TAF: ${r.status}`);
+    const data = await r.json();
+    const map = {};
+    for (const record of data) {
+      if (record.icaoId && !map[record.icaoId]) map[record.icaoId] = record;
+    }
+    return map;
+  } catch (e) {
+    console.warn('TAF fetch failed — falling back to NWS-only:', e);
+    return {};
+  }
+}
+
+function tafPeriodAt(tafRecord, targetMs) {
+  if (!tafRecord || !Array.isArray(tafRecord.fcsts)) return null;
+  const targetSec = Math.floor(targetMs / 1000);
+  for (const period of tafRecord.fcsts) {
+    if (period.timeFrom <= targetSec && targetSec < period.timeTo) return period;
+  }
+  return null;
+}
+
+// Given a TAF forecast period, return { score, verdict } reflecting cloud layer structure.
+// Low thick clouds = marine layer (heavy penalty). High cirrus = bonus (catches color).
+function classifyTAF(period) {
+  if (!period || !Array.isArray(period.clouds)) return { score: 0, verdict: null };
+  const clouds = period.clouds.filter(c => c && c.base !== null);
+  const low       = clouds.filter(c => c.base < 3000);
+  const high      = clouds.filter(c => c.base >= 20000);
+  const lowHeavy  = low.find(c => c.cover === 'BKN' || c.cover === 'OVC');
+  const lowMed    = low.find(c => c.cover === 'SCT');
+  const lowLight  = low.find(c => c.cover === 'FEW');
+  const highHeavy = high.find(c => c.cover === 'BKN' || c.cover === 'OVC');
+
+  let score = 0;
+  let verdict = null;
+  if (lowHeavy) {
+    score += 60;
+    verdict = { label: `Marine layer (${lowHeavy.base}ft)`, klass: 'pill-stone' };
+  } else if (lowMed) {
+    score += 25;
+    verdict = { label: `Low clouds (${lowMed.base}ft)`, klass: 'pill-slate' };
+  } else if (lowLight) {
+    score += 10;
+  }
+  if (highHeavy && !lowHeavy) {
+    score -= 15;
+    if (!verdict) verdict = { label: 'Cirrus — best color', klass: 'pill-rose' };
+  }
+  return { score, verdict };
 }
 
 function isoDate(d) {
@@ -313,7 +600,68 @@ function isoDate(d) {
   return `${y}-${m}-${day}`;
 }
 
+const VERDICT_COLORS = {
+  'pill-gold':  '#f5c860',
+  'pill-coral': '#f58a4e',
+  'pill-rose':  '#e85a99',
+  'pill-slate': '#9aa3b2',
+  'pill-stone': '#7a808a',
+};
+
+// Bounds tuned to frame all 9 viewpoints with padding. SVG viewBox is 740x1000.
+const MAP_BOUNDS = { latMin: 32.66, latMax: 33.11, lonMin: -117.35, lonMax: -116.97 };
+
+function projectLatLon(lat, lon) {
+  const { latMin, latMax, lonMin, lonMax } = MAP_BOUNDS;
+  return {
+    x: ((lon - lonMin) / (lonMax - lonMin)) * 740,
+    y: ((latMax - lat) / (latMax - latMin)) * 1000,
+  };
+}
+
+function renderMap(spots) {
+  const pinsEl = document.getElementById('mapPins');
+  pinsEl.innerHTML = spots.map((s, i) => {
+    const p = projectLatLon(s.lat, s.lon);
+    const color = VERDICT_COLORS[s.verdict.klass] || '#9aa3b2';
+    const isTop = i === 0;
+    const r = isTop ? 22 : 14;
+    const glow = isTop
+      ? `<circle cx="${p.x}" cy="${p.y}" r="${r * 1.8}" fill="${color}" opacity="0.25" filter="url(#pin-glow)"/>`
+      : '';
+    return `
+      ${glow}
+      <circle class="pin" cx="${p.x}" cy="${p.y}" r="${r}"
+              fill="${color}"
+              stroke="rgba(15, 10, 20, 0.6)" stroke-width="2"
+              data-idx="${i}">
+        <title>${s.name} — ${s.verdict.label}</title>
+      </circle>
+    `;
+  }).join('');
+
+  pinsEl.querySelectorAll('.pin').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = el.getAttribute('data-idx');
+      const card = document.getElementById(`spot-${idx}`);
+      if (!card) return;
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.classList.remove('flash');
+      void card.offsetWidth; // restart animation
+      card.classList.add('flash');
+    });
+  });
+}
+
+function loadSatellite() {
+  // Cache-bust to a 5-minute bucket so the CDN can still cache, but reload on refresh.
+  const bucket = Math.floor(Date.now() / (5 * 60 * 1000));
+  const url = `https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/psw/GEOCOLOR/1200x1200.jpg?t=${bucket}`;
+  document.getElementById('satImg').style.backgroundImage = `url("${url}")`;
+}
+
 async function load() {
+  loadSatellite();
   const now = new Date();
   let sunsetTime = await fetchSunset(isoDate(now));
   let eyebrow = 'Sunset Tonight';
@@ -329,14 +677,39 @@ async function load() {
   document.getElementById('countdown').textContent = formatCountdown(sunsetTime, now);
 
   const uniqueGrids = [...new Set(SPOTS.map(s => s.grid))];
-  const gridResults = await Promise.all(uniqueGrids.map(fetchGrid));
+  const uniqueTafs  = [...new Set(SPOTS.map(s => s.taf))];
+  const [gridResults, tafMap] = await Promise.all([
+    Promise.all(uniqueGrids.map(fetchGrid)),
+    fetchTAFs(uniqueTafs),
+  ]);
   const gridMap = Object.fromEntries(uniqueGrids.map((g, i) => [g, gridResults[i]]));
 
+  const FOG_PENALTY = 35;
+
   const spots = SPOTS
-    .map(s => ({ ...s, cloud: cloudAtTime(gridMap[s.grid], sunsetTime) }))
+    .map(s => {
+      const g = gridMap[s.grid];
+      const cloud    = valueAtTime(g.skyCover, sunsetTime);
+      const blocker  = blockingWeather(valueAtTime(g.weather, sunsetTime));
+      const tafCls   = classifyTAF(tafPeriodAt(tafMap[s.taf], sunsetTime.getTime()));
+      return { ...s, cloud, blocker, tafCls };
+    })
     .filter(s => s.cloud !== null)
-    .map(s => ({ ...s, verdict: verdictFor(s.cloud) }))
-    .sort((a, b) => Math.abs(a.cloud - 40) - Math.abs(b.cloud - 40));
+    .map(s => {
+      // TAF verdict wins when it fires (it has better cloud-layer info).
+      // Otherwise fall back to NWS weather keywords, then cloud-% threshold.
+      let verdict;
+      if (s.tafCls.verdict)      verdict = s.tafCls.verdict;
+      else if (s.blocker)        verdict = { label: formatWeather(s.blocker), klass: 'pill-stone' };
+      else                       verdict = verdictFor(s.cloud);
+
+      // Penalties: TAF is authoritative; only add NWS fog penalty if TAF didn't already flag it.
+      let score = Math.abs(s.cloud - 40) + s.tafCls.score;
+      if (s.blocker && !s.tafCls.verdict) score += FOG_PENALTY;
+
+      return { ...s, verdict, score };
+    })
+    .sort((a, b) => a.score - b.score);
 
   const listEl = document.getElementById('list');
   if (spots.length === 0) {
@@ -345,9 +718,9 @@ async function load() {
   }
 
   listEl.innerHTML = spots.map((s, i) => {
-    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}`;
+    const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.place)}`;
     return `
-      <article class="spot${i === 0 ? ' top' : ''}">
+      <article class="spot spot-card${i === 0 ? ' top' : ''}" id="spot-${i}">
         <div>
           <div class="spot-name">${s.name}</div>
           <div class="meta">
@@ -359,6 +732,8 @@ async function load() {
       </article>
     `;
   }).join('');
+
+  renderMap(spots);
 }
 
 load().catch(err => {
