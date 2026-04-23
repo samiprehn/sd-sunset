@@ -160,11 +160,11 @@
 
   .pin-label {
     font-family: 'Inter', -apple-system, sans-serif;
-    font-size: 15px;
-    font-weight: 500;
+    font-size: 28px;
+    font-weight: 600;
     fill: #1e3448;
-    stroke: rgba(255, 255, 255, 0.7);
-    stroke-width: 3px;
+    stroke: rgba(255, 255, 255, 0.75);
+    stroke-width: 5px;
     paint-order: stroke;
     cursor: pointer;
   }
@@ -454,7 +454,7 @@ const SPOTS = [
   { name: 'Torrey Pines Gliderport',    grid: 'SGX/55,22', taf: 'KNKX', lat: 32.8906, lon: -117.2528, place: 'Torrey Pines Gliderport, 2800 Torrey Pines Scenic Dr, La Jolla, CA' },
   { name: 'Mt Soledad',                 grid: 'SGX/54,20', taf: 'KSAN', lat: 32.8403, lon: -117.2506, place: 'Mt Soledad National Veterans Memorial Parking, La Jolla, CA' },
   { name: 'Coronado',                   grid: 'SGX/56,13', taf: 'KNZY', lat: 32.6956, lon: -117.1861, place: 'Coronado Dog Beach, Coronado, CA' },
-  { name: 'Ocean Beach',                grid: 'SGX/54,16', taf: 'KSAN', lat: 32.7521, lon: -117.2522, place: 'Ocean Beach Dog Beach Parking Lot, Voltaire St, San Diego, CA' },
+  { name: 'OB',                         grid: 'SGX/54,16', taf: 'KSAN', lat: 32.7521, lon: -117.2522, place: 'Ocean Beach Dog Beach Parking Lot, Voltaire St, San Diego, CA' },
   { name: 'La Jolla Shores',            grid: 'SGX/54,21', taf: 'KSAN', lat: 32.8571, lon: -117.2573, place: 'Kellogg Park, La Jolla Shores Beach, La Jolla, CA' },
   { name: 'Presidio Park',              grid: 'SGX/56,16', taf: 'KSAN', lat: 32.7583, lon: -117.1977, place: 'Junípero Serra Museum, San Diego, CA' },
   { name: 'Mt Helix',                   grid: 'SGX/63,15', taf: 'KNKX', lat: 32.7659, lon: -116.9990, place: 'Mt Helix Park, La Mesa, CA' },
@@ -649,7 +649,7 @@ function renderMap(spots) {
       : '';
 
     const pos = LABEL_POS[s.name] || (p.x > 600 ? 'left' : 'right');
-    const gap = isTop ? 30 : 20;
+    const gap = isTop ? 36 : 26;
     const labelX = pos === 'left' ? p.x - gap : p.x + gap;
     const anchor = pos === 'left' ? 'end' : 'start';
 
