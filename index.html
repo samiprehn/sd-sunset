@@ -96,6 +96,74 @@
     letter-spacing: 0.02em;
   }
 
+  .day-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .day-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+    padding: 0.75rem 1rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 0.85rem;
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .day-btn:hover:not(.active) { background: var(--card-hover); }
+
+  .day-btn.active {
+    background: rgba(245, 138, 78, 0.10);
+    border-color: rgba(245, 138, 78, 0.35);
+  }
+
+  .day-btn-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .day-btn.active .day-btn-label { color: var(--coral); }
+
+  .day-btn-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 0.55rem;
+    font-size: 0.9rem;
+    color: var(--text);
+  }
+
+  .day-btn-grade {
+    font-size: 1.55rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    font-feature-settings: "tnum";
+  }
+  .day-btn-grade.pill-gold  { color: var(--gold); }
+  .day-btn-grade.pill-coral { color: var(--coral); }
+  .day-btn-grade.pill-rose  { color: var(--rose); }
+  .day-btn-grade.pill-slate { color: var(--slate); }
+  .day-btn-grade.pill-stone { color: var(--stone); }
+
+  .day-btn-best {
+    color: var(--text-dim);
+    font-size: 0.78rem;
+  }
+
+  .side.tomorrow-view .sky-now { display: none; }
+
   .main-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -279,20 +347,25 @@
 
   .directions:hover { color: var(--text); }
 
-  .cloud {
-    font-size: 1.6rem;
-    font-weight: 600;
+  .grade {
+    font-size: 1.95rem;
+    font-weight: 700;
     line-height: 1;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.04em;
     font-feature-settings: "tnum";
-    color: rgba(254, 243, 230, 0.88);
     text-align: right;
+    color: var(--text);
   }
+  .grade.pill-gold  { color: var(--gold); }
+  .grade.pill-coral { color: var(--coral); }
+  .grade.pill-rose  { color: var(--rose); }
+  .grade.pill-slate { color: var(--slate); }
+  .grade.pill-stone { color: var(--stone); }
 
-  .cloud-unit {
-    font-size: 0.6em;
-    color: var(--text-faint);
-    margin-left: 0.1em;
+  .meta-pct {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    font-feature-settings: "tnum";
   }
 
   .status {
@@ -348,18 +421,21 @@
       <div class="time" id="time">—</div>
       <div class="countdown" id="countdown"></div>
     </header>
+    <div class="day-toggle" id="dayToggle">
+      <button class="day-btn active" data-day="today" type="button">
+        <span class="day-btn-label">Tonight</span>
+        <span class="day-btn-meta" id="metaToday">Loading…</span>
+      </button>
+      <button class="day-btn" data-day="tomorrow" type="button">
+        <span class="day-btn-label">Tomorrow</span>
+        <span class="day-btn-meta" id="metaTomorrow">Loading…</span>
+      </button>
+    </div>
     <div class="main-grid">
       <div class="list" id="list">
         <div class="status">Loading forecast…</div>
       </div>
       <aside class="side">
-        <section class="sky-now">
-          <div class="sky-now-label">
-            <span>Sky right now</span>
-            <span class="sky-now-attrib">GOES-18 · Pacific SW</span>
-          </div>
-          <div class="sky-now-crop" id="satImg" role="img" aria-label="Live GOES-18 satellite view centered on San Diego — the marine layer and cloud pattern over the SoCal coast, updated every ~10 minutes."></div>
-        </section>
         <section class="map">
           <div class="map-label">
             <span>Where they are</span>
@@ -432,6 +508,13 @@
             <text x="40" y="992" fill="rgba(30, 52, 72, 0.45)" font-size="14" font-family="Inter, sans-serif" letter-spacing="3">PACIFIC</text>
             <g id="mapPins"></g>
           </svg>
+        </section>
+        <section class="sky-now">
+          <div class="sky-now-label">
+            <span>Sky right now</span>
+            <span class="sky-now-attrib">GOES-18 · Pacific SW</span>
+          </div>
+          <div class="sky-now-crop" id="satImg" role="img" aria-label="Live GOES-18 satellite view centered on San Diego — the marine layer and cloud pattern over the SoCal coast, updated every ~10 minutes."></div>
         </section>
       </aside>
     </div>
@@ -686,33 +769,22 @@ function loadSatellite() {
   document.getElementById('satImg').style.backgroundImage = `url("${url}")`;
 }
 
-async function load() {
-  loadSatellite();
-  const now = new Date();
-  let sunsetTime = await fetchSunset(isoDate(now));
-  let eyebrow = 'Sunset Tonight';
+function gradeFor(verdict) {
+  const label = verdict.label;
+  if (label === 'Cirrus — best color') return 'A+';
+  if (label === 'Great for color')    return 'A';
+  if (label === 'Clear & golden')     return 'B';
+  if (label === 'Hazy')               return 'C';
+  if (label.startsWith('Low clouds')) return 'C';
+  if (label.startsWith('Marine layer')) return 'F';
+  if (label === 'Socked in')          return 'D';
+  return 'D'; // Dynamic NWS weather labels (Patchy fog, Areas of haze, etc.)
+}
 
-  if (now >= sunsetTime) {
-    const tomorrow = new Date(now.getTime() + 86400000);
-    sunsetTime = await fetchSunset(isoDate(tomorrow));
-    eyebrow = `Sunset ${weekdayName(sunsetTime)}`;
-  }
+const FOG_PENALTY = 35;
 
-  document.getElementById('eyebrow').textContent = eyebrow;
-  document.getElementById('time').textContent = formatTime(sunsetTime);
-  document.getElementById('countdown').textContent = formatCountdown(sunsetTime, now);
-
-  const uniqueGrids = [...new Set(SPOTS.map(s => s.grid))];
-  const uniqueTafs  = [...new Set(SPOTS.map(s => s.taf))];
-  const [gridResults, tafMap] = await Promise.all([
-    Promise.all(uniqueGrids.map(fetchGrid)),
-    fetchTAFs(uniqueTafs),
-  ]);
-  const gridMap = Object.fromEntries(uniqueGrids.map((g, i) => [g, gridResults[i]]));
-
-  const FOG_PENALTY = 35;
-
-  const spots = SPOTS
+function computeSpots(sunsetTime, gridMap, tafMap) {
+  return SPOTS
     .map(s => {
       const g = gridMap[s.grid];
       const cloud    = valueAtTime(g.skyCover, sunsetTime);
@@ -733,16 +805,19 @@ async function load() {
       let score = Math.abs(s.cloud - 40) + s.tafCls.score;
       if (s.blocker && !s.tafCls.verdict) score += FOG_PENALTY;
 
-      return { ...s, verdict, score };
+      return { ...s, verdict, score, grade: gradeFor(verdict) };
     })
     .sort((a, b) => a.score - b.score);
+}
 
+const DAY_DATA = { today: null, tomorrow: null };
+
+function renderList(spots) {
   const listEl = document.getElementById('list');
-  if (spots.length === 0) {
-    listEl.innerHTML = `<div class="status">No cloud forecast available for sunset yet — check back later.</div>`;
+  if (!spots.length) {
+    listEl.innerHTML = `<div class="status">No cloud forecast available for this sunset yet — check back later.</div>`;
     return;
   }
-
   listEl.innerHTML = spots.map((s, i) => {
     const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.place)}`;
     return `
@@ -751,15 +826,81 @@ async function load() {
           <div class="spot-name">${s.name}</div>
           <div class="meta">
             <span class="pill ${s.verdict.klass}">${s.verdict.label}</span>
+            <span class="meta-pct">${s.cloud}% clouds</span>
             <a class="directions" href="${mapUrl}" target="_blank" rel="noopener">Directions ↗</a>
           </div>
         </div>
-        <div class="cloud">${s.cloud}<span class="cloud-unit">%</span></div>
+        <div class="grade ${s.verdict.klass}">${s.grade}</div>
       </article>
     `;
   }).join('');
+}
 
-  renderMap(spots);
+function renderDay(dayKey) {
+  const data = DAY_DATA[dayKey];
+  if (!data) return;
+
+  document.getElementById('eyebrow').textContent = data.eyebrow;
+  document.getElementById('time').textContent = formatTime(data.sunset);
+  document.getElementById('countdown').textContent = formatCountdown(data.sunset, new Date());
+
+  document.querySelectorAll('.day-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.day === dayKey);
+  });
+
+  document.querySelector('.side').classList.toggle('tomorrow-view', dayKey === 'tomorrow');
+
+  renderList(data.spots);
+  renderMap(data.spots);
+}
+
+function updateDayButtonMeta(dayKey, spots) {
+  const el = document.getElementById(dayKey === 'today' ? 'metaToday' : 'metaTomorrow');
+  if (!spots || !spots.length) { el.textContent = 'no forecast'; return; }
+  const top = spots[0];
+  el.innerHTML = `
+    <span class="day-btn-grade ${top.verdict.klass}">${top.grade}</span>
+    <span class="day-btn-best">${top.name}</span>
+  `;
+}
+
+async function load() {
+  loadSatellite();
+  const now = new Date();
+  const tomorrow = new Date(now.getTime() + 86400000);
+
+  const [todaySunset, tomorrowSunset] = await Promise.all([
+    fetchSunset(isoDate(now)),
+    fetchSunset(isoDate(tomorrow)),
+  ]);
+
+  const uniqueGrids = [...new Set(SPOTS.map(s => s.grid))];
+  const uniqueTafs  = [...new Set(SPOTS.map(s => s.taf))];
+  const [gridResults, tafMap] = await Promise.all([
+    Promise.all(uniqueGrids.map(fetchGrid)),
+    fetchTAFs(uniqueTafs),
+  ]);
+  const gridMap = Object.fromEntries(uniqueGrids.map((g, i) => [g, gridResults[i]]));
+
+  DAY_DATA.today = {
+    sunset: todaySunset,
+    spots: computeSpots(todaySunset, gridMap, tafMap),
+    eyebrow: 'Sunset Tonight',
+  };
+  DAY_DATA.tomorrow = {
+    sunset: tomorrowSunset,
+    spots: computeSpots(tomorrowSunset, gridMap, tafMap),
+    eyebrow: `Sunset ${weekdayName(tomorrowSunset)}`,
+  };
+
+  updateDayButtonMeta('today', DAY_DATA.today.spots);
+  updateDayButtonMeta('tomorrow', DAY_DATA.tomorrow.spots);
+
+  document.querySelectorAll('.day-btn').forEach(btn => {
+    btn.addEventListener('click', () => renderDay(btn.dataset.day));
+  });
+
+  renderDay(now >= todaySunset ? 'tomorrow' : 'today');
 }
 
 load().catch(err => {
