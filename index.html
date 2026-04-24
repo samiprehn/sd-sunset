@@ -683,7 +683,7 @@ function classifyTAF(period) {
   let verdict = null;
   if (lowHeavy) {
     score += 60;
-    verdict = { label: `Marine layer (${lowHeavy.base}ft)`, klass: 'pill-stone' };
+    verdict = { label: 'Marine layer', klass: 'pill-stone' };
   } else if (lowMed) {
     score += 25;
     verdict = { label: `Low clouds (${lowMed.base}ft)`, klass: 'pill-slate' };
