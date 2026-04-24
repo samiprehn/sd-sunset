@@ -335,11 +335,16 @@
     border-radius: 999px;
   }
 
-  .pill-gold  { background: rgba(245, 200, 96, 0.15);  color: var(--gold); }
-  .pill-coral { background: rgba(245, 138, 78, 0.16);  color: var(--coral); }
-  .pill-rose  { background: rgba(232, 90, 153, 0.18);  color: var(--rose); }
-  .pill-slate { background: rgba(154, 163, 178, 0.15); color: var(--slate); }
-  .pill-stone { background: rgba(106, 112, 122, 0.20); color: var(--stone); }
+  .pill.pill-gold  { background: rgba(245, 200, 96, 0.15); }
+  .pill.pill-coral { background: rgba(245, 138, 78, 0.16); }
+  .pill.pill-rose  { background: rgba(232, 90, 153, 0.18); }
+  .pill.pill-slate { background: rgba(154, 163, 178, 0.15); }
+  .pill.pill-stone { background: rgba(106, 112, 122, 0.20); }
+  .pill-gold  { color: var(--gold); }
+  .pill-coral { color: var(--coral); }
+  .pill-rose  { color: var(--rose); }
+  .pill-slate { color: var(--slate); }
+  .pill-stone { color: var(--stone); }
 
   .directions {
     font-size: 0.8rem;
@@ -524,7 +529,7 @@
     </div>
     <footer>
       <p class="caveat">
-        Ranked by forecast cloud cover at sunset (aiming for ~40% — the sweet spot) with layered cloud data from the nearest airport's TAF. Low thick clouds below 3,000 ft get flagged as a marine-layer risk and pushed down the list. High cirrus gets a small boost since those clouds catch the best pink color. Heuristic only — the real answer is to just go outside and look.
+        Ranked by forecast cloud cover at sunset (aiming for ~40% — the sweet spot) with layered cloud data from the nearest airport's TAF. Low thick clouds below 3,000 ft get flagged as a marine-layer risk and pushed down the list. High cirrus gets a small boost since those clouds catch the best pink color.
       </p>
       <a class="bmc" href="https://buymeacoffee.com/samiprehn" target="_blank" rel="noopener">Keep this page running</a>
     </footer>
