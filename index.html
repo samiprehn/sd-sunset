@@ -557,7 +557,8 @@ const SD_LAT = 32.72, SD_LON = -117.22;
 
 function verdictFor(cloud) {
   if (cloud < 20) return { label: 'Clear & golden', klass: 'pill-gold' };
-  if (cloud < 65) return { label: 'Great for color', klass: 'pill-coral' };
+  if (cloud < 50) return { label: 'Great for color', klass: 'pill-coral' };
+  if (cloud < 75) return { label: 'Partly cloudy',   klass: 'pill-rose' };
   if (cloud < 90) return { label: 'Hazy',            klass: 'pill-slate' };
   return              { label: 'Socked in',          klass: 'pill-stone' };
 }
@@ -672,25 +673,30 @@ function tafPeriodAt(tafRecord, targetMs) {
 function classifyTAF(period) {
   if (!period || !Array.isArray(period.clouds)) return { score: 0, verdict: null };
   const clouds = period.clouds.filter(c => c && c.base !== null);
-  const low       = clouds.filter(c => c.base < 3000);
+  const veryLow   = clouds.filter(c => c.base < 3000);
+  const low       = clouds.filter(c => c.base < 5000);
   const high      = clouds.filter(c => c.base >= 20000);
-  const lowHeavy  = low.find(c => c.cover === 'BKN' || c.cover === 'OVC');
-  const lowMed    = low.find(c => c.cover === 'SCT');
-  const lowLight  = low.find(c => c.cover === 'FEW');
-  const highHeavy = high.find(c => c.cover === 'BKN' || c.cover === 'OVC');
+  const veryLowHeavy = veryLow.find(c => c.cover === 'BKN' || c.cover === 'OVC');
+  const lowHeavy     = low.find(c => c.cover === 'BKN' || c.cover === 'OVC');
+  const lowMed       = low.find(c => c.cover === 'SCT');
+  const lowLight     = low.find(c => c.cover === 'FEW');
+  const highHeavy    = high.find(c => c.cover === 'BKN' || c.cover === 'OVC');
 
   let score = 0;
   let verdict = null;
-  if (lowHeavy) {
+  if (veryLowHeavy) {
     score += 60;
     verdict = { label: 'Marine layer', klass: 'pill-stone' };
+  } else if (lowHeavy) {
+    score += 40;
+    verdict = { label: `Low clouds (${lowHeavy.base}ft)`, klass: 'pill-slate' };
   } else if (lowMed) {
-    score += 25;
-    verdict = { label: `Low clouds (${lowMed.base}ft)`, klass: 'pill-slate' };
+    score += 20;
+    verdict = { label: `Patchy low clouds (${lowMed.base}ft)`, klass: 'pill-slate' };
   } else if (lowLight) {
     score += 10;
   }
-  if (highHeavy && !lowHeavy) {
+  if (highHeavy && !veryLowHeavy && !lowHeavy) {
     score -= 15;
     if (!verdict) verdict = { label: 'Cirrus — best color', klass: 'pill-rose' };
   }
@@ -782,9 +788,11 @@ function gradeFor(verdict) {
   const label = verdict.label;
   if (label === 'Cirrus — best color') return 'A+';
   if (label === 'Great for color')    return 'A';
-  if (label === 'Clear & golden')     return 'B';
-  if (label === 'Hazy')               return 'C';
-  if (label.startsWith('Low clouds')) return 'C';
+  if (label === 'Partly cloudy')      return 'B';
+  if (label === 'Clear & golden')     return 'C';
+  if (label === 'Hazy')               return 'D';
+  if (label.startsWith('Low clouds')) return 'D';
+  if (label.startsWith('Patchy low')) return 'C';
   if (label.startsWith('Marine layer')) return 'F';
   if (label === 'Socked in')          return 'D';
   return 'D'; // Dynamic NWS weather labels (Patchy fog, Areas of haze, etc.)
