@@ -542,15 +542,15 @@
 // `lat`/`lon` are used to project each spot onto the stylized SVG map.
 const SPOTS = [
   { name: 'Sunset Cliffs',              grid: 'SGX/53,14', taf: 'KSAN', lat: 32.7157, lon: -117.2542, place: 'Sunset Cliffs Natural Park Parking, San Diego, CA' },
-  { name: 'Torrey Pines Gliderport',    grid: 'SGX/55,22', taf: 'KNKX', lat: 32.8906, lon: -117.2528, place: 'Torrey Pines Gliderport, 2800 Torrey Pines Scenic Dr, La Jolla, CA' },
-  { name: 'Mt Soledad',                 grid: 'SGX/54,20', taf: 'KSAN', lat: 32.8403, lon: -117.2506, place: 'Mt Soledad National Veterans Memorial Parking, La Jolla, CA' },
-  { name: 'Coronado',                   grid: 'SGX/56,13', taf: 'KNZY', lat: 32.6956, lon: -117.1861, place: 'Coronado Dog Beach, Coronado, CA' },
-  { name: 'OB',                         grid: 'SGX/54,16', taf: 'KSAN', lat: 32.7521, lon: -117.2522, place: 'Ocean Beach Dog Beach Parking Lot, Voltaire St, San Diego, CA' },
-  { name: 'La Jolla Shores',            grid: 'SGX/54,21', taf: 'KSAN', lat: 32.8571, lon: -117.2573, place: 'Kellogg Park, La Jolla Shores Beach, La Jolla, CA' },
+  { name: 'Torrey Pines Gliderport',    grid: 'SGX/55,22', taf: 'KNKX', lat: 32.8906, lon: -117.2528, place: 'Torrey Pines Gliderport, 2800 Torrey Pines Scenic Dr, La Jolla, CA', cam: { name: 'Torrey Pines Gliderport', url: 'https://www.flytorrey.com/weather-conditions-forecast/' } },
+  { name: 'Mt Soledad',                 grid: 'SGX/54,20', taf: 'KSAN', lat: 32.8403, lon: -117.2506, place: 'Mt Soledad National Veterans Memorial Parking, La Jolla, CA', cam: { name: 'Mt Soledad', url: 'https://www.ventusky.com/webcam-178052479' } },
+  { name: 'Coronado',                   grid: 'SGX/56,13', taf: 'KNZY', lat: 32.6956, lon: -117.1861, place: 'Coronado Dog Beach, Coronado, CA', cam: { name: 'Hotel Del Coronado', url: 'https://hdontap.com/stream/964952/hotel-del-coronado-4k-roaming-live-cam/' } },
+  { name: 'OB',                         grid: 'SGX/54,16', taf: 'KSAN', lat: 32.7521, lon: -117.2522, place: 'Ocean Beach Dog Beach Parking Lot, Voltaire St, San Diego, CA', cam: { name: 'OB Beach Cam', url: 'https://oceanbeachsandiego.com/media/ob-beach-cam' } },
+  { name: 'La Jolla Shores',            grid: 'SGX/54,21', taf: 'KSAN', lat: 32.8571, lon: -117.2573, place: 'Kellogg Park, La Jolla Shores Beach, La Jolla, CA', cam: { name: 'Scripps Pier', url: 'https://scripps.ucsd.edu/piercam' } },
   { name: 'Presidio Park',              grid: 'SGX/56,16', taf: 'KSAN', lat: 32.7583, lon: -117.1977, place: 'Junípero Serra Museum, San Diego, CA' },
   { name: 'Mt Helix',                   grid: 'SGX/63,15', taf: 'KNKX', lat: 32.7659, lon: -116.9990, place: 'Mt Helix Park, La Mesa, CA' },
-  { name: 'Ponto Beach',                grid: 'SGX/54,31', taf: 'KCRQ', lat: 33.0760, lon: -117.3110, place: 'Ponto Beach, Carlsbad, CA' },
-  { name: 'Del Mar',                    grid: 'SGX/55,26', taf: 'KCRQ', lat: 32.9700, lon: -117.2650, place: 'Del Mar Dog Beach, Camino del Mar, Del Mar, CA' },
+  { name: 'Ponto Beach',                grid: 'SGX/54,31', taf: 'KCRQ', lat: 33.0760, lon: -117.3110, place: 'Ponto Beach, Carlsbad, CA', cam: { name: 'Ponto Beach', url: 'https://www.surfoutlook.com/surfcam/sandiego/ponto' } },
+  { name: 'Del Mar',                    grid: 'SGX/55,26', taf: 'KCRQ', lat: 32.9700, lon: -117.2650, place: 'Del Mar Dog Beach, Camino del Mar, Del Mar, CA', cam: { name: 'Del Mar Overlook', url: 'https://hdontap.com/stream/101962/del-mar-beach-community-ultra-hd-overlook-live-webcvam/' } },
 ];
 
 const SD_LAT = 32.72, SD_LON = -117.22;
@@ -845,6 +845,7 @@ function renderList(spots) {
             <span class="pill ${s.verdict.klass}">${s.verdict.label}</span>
             <span class="meta-pct">${s.cloud}% clouds</span>
             <a class="directions" href="${mapUrl}" target="_blank" rel="noopener">Directions ↗</a>
+            ${s.cam ? `<a class="directions" href="${s.cam.url}" target="_blank" rel="noopener">📹 ${s.cam.name} ↗</a>` : ''}
           </div>
         </div>
         <div class="grade ${s.verdict.klass}">${s.grade}</div>
