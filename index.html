@@ -845,7 +845,7 @@ function renderList(spots) {
             <span class="pill ${s.verdict.klass}">${s.verdict.label}</span>
             <span class="meta-pct">${s.cloud}% clouds</span>
             <a class="directions" href="${mapUrl}" target="_blank" rel="noopener">Directions ↗</a>
-            ${s.cam ? `<a class="directions" href="${s.cam.url}" target="_blank" rel="noopener">📹 ${s.cam.name} ↗</a>` : ''}
+            ${s.cam ? `<a class="directions" href="${s.cam.url}" target="_blank" rel="noopener">📹 Webcam ↗</a>` : ''}
           </div>
         </div>
         <div class="grade ${s.verdict.klass}">${s.grade}</div>
