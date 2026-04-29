@@ -252,14 +252,17 @@ def main():
     title = '🌅 A+ sunset tonight'
     message = f'{spot_list} · sunset {time_str} · high cirrus over a clear lower sky'
 
+    # Publish via JSON body — HTTP headers are latin-1 only, so emoji-in-title
+    # breaks header-style ntfy posts. JSON body is UTF-8.
     requests.post(
-        f'https://ntfy.sh/{NTFY_TOPIC}',
-        data=message.encode('utf-8'),
-        headers={
-            'Title': title,
-            'Priority': 'high',
-            'Click': SITE_URL,
-            'Tags': 'sunrise',
+        'https://ntfy.sh/',
+        json={
+            'topic': NTFY_TOPIC,
+            'title': title,
+            'message': message,
+            'priority': 5,
+            'click': SITE_URL,
+            'tags': ['sunrise'],
         },
         timeout=30,
     )
