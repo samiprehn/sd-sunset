@@ -25,6 +25,7 @@
     --border: rgba(255, 255, 255, 0.08);
     --gold: #f5c860;
     --coral: #f58a4e;
+    --orange: #f97316;
     --rose: #e85a99;
     --slate: #9aa3b2;
     --stone: #6a707a;
@@ -153,9 +154,10 @@
     background: transparent;
     padding: 0;
   }
-  .day-btn-grade.pill-gold  { color: var(--gold); }
-  .day-btn-grade.pill-coral { color: var(--coral); }
-  .day-btn-grade.pill-rose  { color: var(--rose); }
+  .day-btn-grade.pill-gold   { color: var(--gold); }
+  .day-btn-grade.pill-coral  { color: var(--coral); }
+  .day-btn-grade.pill-orange { color: var(--orange); }
+  .day-btn-grade.pill-rose   { color: var(--rose); }
   .day-btn-grade.pill-slate { color: var(--slate); }
   .day-btn-grade.pill-stone { color: var(--stone); }
 
@@ -335,16 +337,18 @@
     border-radius: 999px;
   }
 
-  .pill.pill-gold  { background: rgba(245, 200, 96, 0.15); }
-  .pill.pill-coral { background: rgba(245, 138, 78, 0.16); }
-  .pill.pill-rose  { background: rgba(232, 90, 153, 0.18); }
-  .pill.pill-slate { background: rgba(154, 163, 178, 0.15); }
-  .pill.pill-stone { background: rgba(106, 112, 122, 0.20); }
-  .pill-gold  { color: var(--gold); }
-  .pill-coral { color: var(--coral); }
-  .pill-rose  { color: var(--rose); }
-  .pill-slate { color: var(--slate); }
-  .pill-stone { color: var(--stone); }
+  .pill.pill-gold   { background: rgba(245, 200, 96, 0.15); }
+  .pill.pill-coral  { background: rgba(245, 138, 78, 0.16); }
+  .pill.pill-orange { background: rgba(249, 115, 22, 0.18); }
+  .pill.pill-rose   { background: rgba(232, 90, 153, 0.18); }
+  .pill.pill-slate  { background: rgba(154, 163, 178, 0.15); }
+  .pill.pill-stone  { background: rgba(106, 112, 122, 0.20); }
+  .pill-gold   { color: var(--gold); }
+  .pill-coral  { color: var(--coral); }
+  .pill-orange { color: var(--orange); }
+  .pill-rose   { color: var(--rose); }
+  .pill-slate  { color: var(--slate); }
+  .pill-stone  { color: var(--stone); }
 
   .directions {
     font-size: 0.8rem;
@@ -365,9 +369,10 @@
     background: transparent;
     padding: 0;
   }
-  .grade.pill-gold  { color: var(--gold); }
-  .grade.pill-coral { color: var(--coral); }
-  .grade.pill-rose  { color: var(--rose); }
+  .grade.pill-gold   { color: var(--gold); }
+  .grade.pill-coral  { color: var(--coral); }
+  .grade.pill-orange { color: var(--orange); }
+  .grade.pill-rose   { color: var(--rose); }
   .grade.pill-slate { color: var(--slate); }
   .grade.pill-stone { color: var(--stone); }
 
@@ -562,7 +567,7 @@ const SD_LAT = 32.72, SD_LON = -117.22;
 function verdictFor(cloud) {
   if (cloud < 20) return { label: 'Clear & golden', klass: 'pill-gold' };
   if (cloud < 50) return { label: 'Great for color', klass: 'pill-coral' };
-  if (cloud < 75) return { label: 'Partly cloudy',   klass: 'pill-rose' };
+  if (cloud < 75) return { label: 'Partly cloudy',   klass: 'pill-orange' };
   if (cloud < 90) return { label: 'Hazy',            klass: 'pill-slate' };
   return              { label: 'Socked in',          klass: 'pill-stone' };
 }
