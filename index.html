@@ -834,8 +834,10 @@ function computeSpots(sunsetTime, gridMap, tafMap) {
 
       return { ...s, verdict, score, grade: gradeFor(verdict) };
     })
-    .sort((a, b) => a.score - b.score);
+    .sort((a, b) => (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (a.score - b.score));
 }
+
+const GRADE_RANK = { 'A+': 0, 'A': 1, 'B': 2, 'C': 3, 'C-': 4, 'D': 5, 'F': 6 };
 
 const DAY_DATA = { today: null, tomorrow: null };
 
