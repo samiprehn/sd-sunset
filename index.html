@@ -802,7 +802,7 @@ function gradeFor(verdict) {
   if (label === 'Clear & golden')     return 'C';
   if (label === 'Hazy')               return 'D';
   if (label.startsWith('Low clouds')) return 'D';
-  if (label.startsWith('Patchy low')) return 'C';
+  if (label.startsWith('Patchy low')) return 'C-';
   if (label.startsWith('Marine layer')) return 'F';
   if (label === 'Socked in')          return 'D';
   return 'D'; // Dynamic NWS weather labels (Patchy fog, Areas of haze, etc.)

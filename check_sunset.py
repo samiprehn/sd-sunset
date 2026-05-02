@@ -174,7 +174,7 @@ def grade_for(label):
     if label == 'Clear & golden':      return 'C'
     if label == 'Hazy':                return 'D'
     if label.startswith('Low clouds'): return 'D'
-    if label.startswith('Patchy low'): return 'C'
+    if label.startswith('Patchy low'): return 'C-'
     if label == 'Marine layer':        return 'F'
     if label == 'Socked in':           return 'D'
     return 'D'
