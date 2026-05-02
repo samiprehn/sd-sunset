@@ -841,7 +841,7 @@ const GRADE_RANK = { 'A+': 0, 'A': 1, 'B': 2, 'C': 3, 'C-': 4, 'D': 5, 'F': 6 };
 
 const DAY_DATA = { today: null, tomorrow: null };
 
-function renderList(spots) {
+function renderList(spots, showCams = true) {
   const listEl = document.getElementById('list');
   if (!spots.length) {
     listEl.innerHTML = `<div class="status">No cloud forecast available for this sunset yet — check back later.</div>`;
@@ -857,7 +857,7 @@ function renderList(spots) {
             <span class="pill ${s.verdict.klass}">${s.verdict.label}</span>
             <span class="meta-pct">${s.cloud}% clouds</span>
             <a class="directions" href="${mapUrl}" target="_blank" rel="noopener">Directions ↗</a>
-            ${s.cam ? `<a class="directions" href="${s.cam.url}" target="_blank" rel="noopener">📹 Webcam ↗</a>` : ''}
+            ${showCams && s.cam ? `<a class="directions" href="${s.cam.url}" target="_blank" rel="noopener">📹 Webcam ↗</a>` : ''}
           </div>
         </div>
         <div class="grade ${s.verdict.klass}">${s.grade}</div>
@@ -880,7 +880,7 @@ function renderDay(dayKey) {
 
   document.querySelector('.side').classList.toggle('tomorrow-view', dayKey === 'tomorrow');
 
-  renderList(data.spots);
+  renderList(data.spots, dayKey === 'today');
   renderMap(data.spots);
 }
 
