@@ -429,9 +429,29 @@
 </style>
 </head>
 <body>
+  <svg id="sun-horizon" viewBox="0 0 100 70" aria-hidden="true" style="position:fixed;top:0.75rem;right:0.75rem;width:80px;height:56px;pointer-events:none;z-index:5;filter:drop-shadow(0 4px 14px rgba(0,0,0,0.35));">
+    <defs>
+      <linearGradient id="sun-horizon-sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#1a0a18"/>
+        <stop offset="50%" stop-color="#4a1823"/>
+        <stop offset="100%" stop-color="#e07a5f"/>
+      </linearGradient>
+      <radialGradient id="sun-horizon-disc" cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0%" stop-color="#fde68a"/>
+        <stop offset="55%" stop-color="#fbbf24"/>
+        <stop offset="100%" stop-color="#f97316"/>
+      </radialGradient>
+      <clipPath id="sun-horizon-clip">
+        <rect x="0" y="0" width="100" height="55"/>
+      </clipPath>
+    </defs>
+    <rect x="0" y="0" width="100" height="55" rx="6" fill="url(#sun-horizon-sky)"/>
+    <circle id="sun-horizon-disc-circle" cx="50" cy="60" r="13" fill="url(#sun-horizon-disc)" clip-path="url(#sun-horizon-clip)"/>
+    <line x1="0" y1="55" x2="100" y2="55" stroke="rgba(0,0,0,0.55)" stroke-width="1.6"/>
+  </svg>
   <div class="container">
     <header>
-      <div class="eyebrow" id="eyebrow">Sunset Tonight</div>
+      <div class="eyebrow" id="eyebrow">San Diego Sunset Tonight</div>
       <div class="time" id="time">—</div>
       <div class="countdown" id="countdown"></div>
     </header>
@@ -915,12 +935,12 @@ async function load() {
   DAY_DATA.today = {
     sunset: todaySunset,
     spots: computeSpots(todaySunset, gridMap, tafMap),
-    eyebrow: 'Sunset Tonight',
+    eyebrow: 'San Diego Sunset Tonight',
   };
   DAY_DATA.tomorrow = {
     sunset: tomorrowSunset,
     spots: computeSpots(tomorrowSunset, gridMap, tafMap),
-    eyebrow: `Sunset ${weekdayName(tomorrowSunset)}`,
+    eyebrow: `San Diego Sunset ${weekdayName(tomorrowSunset)}`,
   };
 
   updateDayButtonMeta('today', DAY_DATA.today.spots);
@@ -941,6 +961,35 @@ load().catch(err => {
     </div>
   `;
 });
+
+// Sun-on-horizon preview (top right). Sun y-position tracks current sun altitude.
+(function () {
+  const PI = Math.PI, RAD = PI / 180, OBL = RAD * 23.4397;
+  const toDays = (d) => d.getTime() / 86400000 - 0.5 + 2440588 - 2451545;
+  function sunAlt(date) {
+    const d = toDays(date);
+    const M = RAD * (357.5291 + 0.98560028 * d);
+    const C = RAD * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2*M) + 0.0003 * Math.sin(3*M));
+    const L = M + C + RAD * 102.9372 + PI;
+    const dec = Math.asin(Math.sin(OBL) * Math.sin(L));
+    const ra = Math.atan2(Math.sin(L) * Math.cos(OBL), Math.cos(L));
+    const lat = RAD * SD_LAT, lon = RAD * SD_LON;
+    const H = RAD * (280.16 + 360.9856235 * d) + lon - ra;
+    return Math.asin(Math.sin(lat) * Math.sin(dec) + Math.cos(lat) * Math.cos(dec) * Math.cos(H));
+  }
+  function update() {
+    const disc = document.getElementById('sun-horizon-disc-circle');
+    if (!disc) return;
+    // y=55 is the horizon line. Altitude 0° → sun sits on horizon (cy=55,
+    // top half visible above the line). Up to 75° → sun reaches near the top.
+    const altDeg = sunAlt(new Date()) * 180 / PI;
+    const cap = Math.max(-15, Math.min(75, altDeg));
+    const cy = cap >= 0 ? 55 - cap * 0.62 : 55 - cap * 0.7; // gentler descent below horizon
+    disc.setAttribute('cy', cy.toFixed(1));
+  }
+  update();
+  setInterval(update, 60000); // refresh every minute
+})();
 </script>
 </body>
 </html>
