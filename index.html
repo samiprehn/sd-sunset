@@ -410,6 +410,11 @@
   }
   .bmc:hover { color: var(--text); }
 
+  .sun-horizon-svg { width: 80px; height: 56px; }
+  @media (max-width: 600px) {
+    .sun-horizon-svg { width: 48px; height: 34px; top: 0.5rem !important; right: 0.5rem !important; }
+  }
+
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -429,7 +434,7 @@
 </style>
 </head>
 <body>
-  <svg id="sun-horizon" viewBox="0 0 100 70" aria-hidden="true" style="position:fixed;top:0.75rem;right:0.75rem;width:80px;height:56px;pointer-events:none;z-index:5;filter:drop-shadow(0 4px 14px rgba(0,0,0,0.35));">
+  <svg id="sun-horizon" viewBox="0 0 100 70" aria-hidden="true" class="sun-horizon-svg" style="position:fixed;top:0.75rem;right:0.75rem;pointer-events:none;z-index:5;filter:drop-shadow(0 4px 14px rgba(0,0,0,0.35));">
     <defs>
       <linearGradient id="sun-horizon-sky" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="#1a0a18"/>
