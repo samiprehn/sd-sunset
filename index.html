@@ -154,6 +154,14 @@
     background: transparent;
     padding: 0;
   }
+  /* Higher specificity than .day-btn's inherited color so the grade tints win. */
+  .day-btn-grade.pill-gold   { color: var(--gold); }
+  .day-btn-grade.pill-coral  { color: var(--coral); }
+  .day-btn-grade.pill-orange { color: var(--orange); }
+  .day-btn-grade.pill-rose   { color: var(--rose); }
+  .day-btn-grade.pill-slate  { color: var(--slate); }
+  .day-btn-grade.pill-stone  { color: var(--stone); }
+
   .day-btn-best {
     color: var(--text-dim);
     font-size: 0.78rem;
@@ -362,6 +370,14 @@
     background: transparent;
     padding: 0;
   }
+  /* Higher specificity than .grade's own color so the pill tint wins. */
+  .grade.pill-gold   { color: var(--gold); }
+  .grade.pill-coral  { color: var(--coral); }
+  .grade.pill-orange { color: var(--orange); }
+  .grade.pill-rose   { color: var(--rose); }
+  .grade.pill-slate  { color: var(--slate); }
+  .grade.pill-stone  { color: var(--stone); }
+
   .meta-pct {
     font-size: 0.78rem;
     color: var(--text-dim);
