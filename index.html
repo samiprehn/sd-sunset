@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SD Sunset Tonight</title>
-<meta name="description" content="Tonight's San Diego sunset, ranked by cloud cover across seven viewpoints.">
+<meta name="description" content="Tonight's San Diego sunset, ranked by cloud cover across ten viewpoints.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌅</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -154,13 +154,6 @@
     background: transparent;
     padding: 0;
   }
-  .day-btn-grade.pill-gold   { color: var(--gold); }
-  .day-btn-grade.pill-coral  { color: var(--coral); }
-  .day-btn-grade.pill-orange { color: var(--orange); }
-  .day-btn-grade.pill-rose   { color: var(--rose); }
-  .day-btn-grade.pill-slate { color: var(--slate); }
-  .day-btn-grade.pill-stone { color: var(--stone); }
-
   .day-btn-best {
     color: var(--text-dim);
     font-size: 0.78rem;
@@ -369,13 +362,6 @@
     background: transparent;
     padding: 0;
   }
-  .grade.pill-gold   { color: var(--gold); }
-  .grade.pill-coral  { color: var(--coral); }
-  .grade.pill-orange { color: var(--orange); }
-  .grade.pill-rose   { color: var(--rose); }
-  .grade.pill-slate { color: var(--slate); }
-  .grade.pill-stone { color: var(--stone); }
-
   .meta-pct {
     font-size: 0.78rem;
     color: var(--text-dim);
@@ -590,19 +576,17 @@ const SPOTS = [
 const SD_LAT = 32.72, SD_LON = -117.22;
 
 function verdictFor(cloud) {
-  if (cloud < 20) return { label: 'Clear & golden', klass: 'pill-gold' };
-  if (cloud < 50) return { label: 'Great for color', klass: 'pill-coral' };
-  if (cloud < 75) return { label: 'Partly cloudy',   klass: 'pill-orange' };
-  if (cloud < 90) return { label: 'Hazy',            klass: 'pill-slate' };
-  return              { label: 'Socked in',          klass: 'pill-stone' };
+  if (cloud < 20) return { label: 'Clear & golden', klass: 'pill-gold',   grade: 'C' };
+  if (cloud < 50) return { label: 'Great for color', klass: 'pill-coral', grade: 'A' };
+  if (cloud < 75) return { label: 'Partly cloudy',   klass: 'pill-orange', grade: 'B' };
+  if (cloud < 90) return { label: 'Hazy',            klass: 'pill-slate', grade: 'D' };
+  return              { label: 'Socked in',          klass: 'pill-stone', grade: 'D' };
 }
 
 function parseDuration(iso) {
   const m = iso.match(/P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?/);
   if (!m) return 0;
-  const days  = parseInt(m[1] || '0', 10);
-  const hours = parseInt(m[2] || '0', 10);
-  const mins  = parseInt(m[3] || '0', 10);
+  const [days, hours, mins] = [1, 2, 3].map(i => +(m[i] || 0));
   return ((days * 24 + hours) * 60 + mins) * 60 * 1000;
 }
 
@@ -629,7 +613,7 @@ function formatWeather(w) {
   if (!w.coverage || w.coverage === 'definite') {
     return wx.charAt(0).toUpperCase() + wx.slice(1);
   }
-  const prefix = COVERAGE_PREFIX[w.coverage] || w.coverage;
+  const prefix = COVERAGE_PREFIX[w.coverage] || w.coverage.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
   return `${prefix} ${wx}`;
 }
 
@@ -702,37 +686,39 @@ function tafPeriodAt(tafRecord, targetMs) {
   return null;
 }
 
-// Given a TAF forecast period, return { score, verdict } reflecting cloud layer structure.
+const HEAVY_COVER = new Set(['BKN', 'OVC']);
+
 // Low thick clouds = marine layer (heavy penalty). High cirrus = bonus (catches color).
 function classifyTAF(period) {
   if (!period || !Array.isArray(period.clouds)) return { score: 0, verdict: null };
   const clouds = period.clouds.filter(c => c && c.base !== null);
-  const veryLow   = clouds.filter(c => c.base < 3000);
-  const low       = clouds.filter(c => c.base < 5000);
-  const high      = clouds.filter(c => c.base >= 20000);
-  const veryLowHeavy = veryLow.find(c => c.cover === 'BKN' || c.cover === 'OVC');
-  const lowHeavy     = low.find(c => c.cover === 'BKN' || c.cover === 'OVC');
+  const veryLow      = clouds.filter(c => c.base < 3000);
+  const low          = clouds.filter(c => c.base < 5000);
+  const high         = clouds.filter(c => c.base >= 20000);
+  const isHeavy      = c => HEAVY_COVER.has(c.cover);
+  const veryLowHeavy = veryLow.find(isHeavy);
+  const lowHeavy     = low.find(isHeavy);
   const lowMed       = low.find(c => c.cover === 'SCT');
   const lowLight     = low.find(c => c.cover === 'FEW');
-  const highHeavy    = high.find(c => c.cover === 'BKN' || c.cover === 'OVC');
+  const highHeavy    = high.find(isHeavy);
 
   let score = 0;
   let verdict = null;
   if (veryLowHeavy) {
     score += 60;
-    verdict = { label: 'Marine layer', klass: 'pill-stone' };
+    verdict = { label: 'Marine layer', klass: 'pill-stone', grade: 'F' };
   } else if (lowHeavy) {
     score += 40;
-    verdict = { label: `Low clouds (${lowHeavy.base}ft)`, klass: 'pill-slate' };
+    verdict = { label: `Low clouds (${lowHeavy.base}ft)`, klass: 'pill-slate', grade: 'D' };
   } else if (lowMed) {
     score += 20;
-    verdict = { label: `Patchy low clouds (${lowMed.base}ft)`, klass: 'pill-slate' };
+    verdict = { label: `Patchy low clouds (${lowMed.base}ft)`, klass: 'pill-slate', grade: 'C-' };
   } else if (lowLight) {
     score += 10;
   }
   if (highHeavy && !veryLowHeavy && !lowHeavy) {
     score -= 15;
-    if (!verdict) verdict = { label: 'Cirrus — best color', klass: 'pill-rose' };
+    if (!verdict) verdict = { label: 'Cirrus — best color', klass: 'pill-rose', grade: 'A+' };
   }
   return { score, verdict };
 }
@@ -744,16 +730,17 @@ function isoDate(d) {
   return `${y}-${m}-${day}`;
 }
 
+const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const VERDICT_COLORS = {
-  'pill-gold':   '#f5c860',
-  'pill-coral':  '#f58a4e',
-  'pill-orange': '#f97316',
-  'pill-rose':   '#e85a99',
-  'pill-slate':  '#9aa3b2',
-  'pill-stone':  '#7a808a',
+  'pill-gold':   cssVar('--gold'),
+  'pill-coral':  cssVar('--coral'),
+  'pill-orange': cssVar('--orange'),
+  'pill-rose':   cssVar('--rose'),
+  'pill-slate':  cssVar('--slate'),
+  'pill-stone':  cssVar('--stone'),
 };
 
-// Bounds tuned to frame all 9 viewpoints with padding. SVG viewBox is 740x1000.
+// Bounds tuned to frame all viewpoints with padding. SVG viewBox is 740x1000.
 const MAP_BOUNDS = { latMin: 32.66, latMax: 33.11, lonMin: -117.35, lonMax: -116.97 };
 
 function projectLatLon(lat, lon) {
@@ -813,24 +800,10 @@ function renderMap(spots) {
 }
 
 function loadSatellite() {
-  // Cache-bust to a 5-minute bucket so the CDN can still cache, but reload on refresh.
+  // 5-minute bucket lets the CDN cache while letting the page see fresh frames.
   const bucket = Math.floor(Date.now() / (5 * 60 * 1000));
   const url = `https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/psw/GEOCOLOR/1200x1200.jpg?t=${bucket}`;
   document.getElementById('satImg').style.backgroundImage = `url("${url}")`;
-}
-
-function gradeFor(verdict) {
-  const label = verdict.label;
-  if (label === 'Cirrus — best color') return 'A+';
-  if (label === 'Great for color')    return 'A';
-  if (label === 'Partly cloudy')      return 'B';
-  if (label === 'Clear & golden')     return 'C';
-  if (label === 'Hazy')               return 'D';
-  if (label.startsWith('Low clouds')) return 'D';
-  if (label.startsWith('Patchy low')) return 'C-';
-  if (label.startsWith('Marine layer')) return 'F';
-  if (label === 'Socked in')          return 'D';
-  return 'D'; // Dynamic NWS weather labels (Patchy fog, Areas of haze, etc.)
 }
 
 const FOG_PENALTY = 35;
@@ -850,14 +823,14 @@ function computeSpots(sunsetTime, gridMap, tafMap) {
       // Otherwise fall back to NWS weather keywords, then cloud-% threshold.
       let verdict;
       if (s.tafCls.verdict)      verdict = s.tafCls.verdict;
-      else if (s.blocker)        verdict = { label: formatWeather(s.blocker), klass: 'pill-stone' };
+      else if (s.blocker)        verdict = { label: formatWeather(s.blocker), klass: 'pill-stone', grade: 'D' };
       else                       verdict = verdictFor(s.cloud);
 
       // Penalties: TAF is authoritative; only add NWS fog penalty if TAF didn't already flag it.
       let score = Math.abs(s.cloud - 40) + s.tafCls.score;
       if (s.blocker && !s.tafCls.verdict) score += FOG_PENALTY;
 
-      return { ...s, verdict, score, grade: gradeFor(verdict) };
+      return { ...s, verdict, score, grade: verdict.grade };
     })
     .sort((a, b) => (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (a.score - b.score));
 }
@@ -865,8 +838,9 @@ function computeSpots(sunsetTime, gridMap, tafMap) {
 const GRADE_RANK = { 'A+': 0, 'A': 1, 'B': 2, 'C': 3, 'C-': 4, 'D': 5, 'F': 6 };
 
 const DAY_DATA = { today: null, tomorrow: null };
+let activeDayKey = 'today';
 
-function renderList(spots, showCams = true) {
+function renderList(spots) {
   const listEl = document.getElementById('list');
   if (!spots.length) {
     listEl.innerHTML = `<div class="status">No cloud forecast available for this sunset yet — check back later.</div>`;
@@ -882,7 +856,7 @@ function renderList(spots, showCams = true) {
             <span class="pill ${s.verdict.klass}">${s.verdict.label}</span>
             <span class="meta-pct">${s.cloud}% clouds</span>
             <a class="directions" href="${mapUrl}" target="_blank" rel="noopener">Directions ↗</a>
-            ${showCams && s.cam ? `<a class="directions" href="${s.cam.url}" target="_blank" rel="noopener">📹 Webcam ↗</a>` : ''}
+            ${s.cam ? `<a class="directions" href="${s.cam.url}" target="_blank" rel="noopener">📹 Webcam ↗</a>` : ''}
           </div>
         </div>
         <div class="grade ${s.verdict.klass}">${s.grade}</div>
@@ -894,6 +868,7 @@ function renderList(spots, showCams = true) {
 function renderDay(dayKey) {
   const data = DAY_DATA[dayKey];
   if (!data) return;
+  activeDayKey = dayKey;
 
   document.getElementById('eyebrow').textContent = data.eyebrow;
   document.getElementById('time').textContent = formatTime(data.sunset);
@@ -905,7 +880,7 @@ function renderDay(dayKey) {
 
   document.querySelector('.side').classList.toggle('tomorrow-view', dayKey === 'tomorrow');
 
-  renderList(data.spots, dayKey === 'today');
+  renderList(data.spots);
   renderMap(data.spots);
 }
 
@@ -991,9 +966,15 @@ load().catch(err => {
     const cap = Math.max(-15, Math.min(75, altDeg));
     const cy = cap >= 0 ? 55 - cap * 0.62 : 55 - cap * 0.7; // gentler descent below horizon
     disc.setAttribute('cy', cy.toFixed(1));
+
+    const active = DAY_DATA[activeDayKey];
+    if (active) {
+      document.getElementById('countdown').textContent = formatCountdown(active.sunset, new Date());
+    }
   }
   update();
-  setInterval(update, 60000); // refresh every minute
+  setInterval(update, 60000);
+  setInterval(loadSatellite, 5 * 60 * 1000);
 })();
 </script>
 </body>
