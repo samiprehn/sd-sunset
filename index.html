@@ -561,7 +561,7 @@
     </div>
     <footer>
       <p class="caveat">
-        Ranked by forecast cloud cover at sunset (aiming for ~40% — the sweet spot) with layered cloud data from the nearest airport's TAF. Low thick clouds below 3,000 ft get flagged as a marine-layer risk and pushed down the list. High cirrus gets a small boost since those clouds catch the best pink color.
+        Scored 0–100 per spot from layered cloud forecasts: high and mid clouds overhead are the color canvas (best near 45% cover), then the score is cut by low clouds hiding the horizon — locally or 80 km offshore, where they block the light path before it arrives. Clear skies grade a C: sunset color needs clouds to catch the light.
       </p>
       <div style="text-align: center;">
         <a class="bmc" href="https://buymeacoffee.com/samiprehn" target="_blank" rel="noopener">Keep this page running</a>
@@ -572,72 +572,65 @@
   </div>
 
 <script>
-// `grid` is the NWS SGX gridpoint for the viewpoint's lat/lon (hardcoded to skip /points/ lookups).
-// `taf`  is the nearest airport with a published TAF — used for layered cloud forecasts.
 // `place` is a Google-Maps-searchable destination for the directions link.
 // `lat`/`lon` are used to project each spot onto the stylized SVG map.
 const SPOTS = [
-  { name: 'Sunset Cliffs',              grid: 'SGX/53,14', taf: 'KSAN', lat: 32.7157, lon: -117.2542, place: 'Sunset Cliffs Natural Park Parking, San Diego, CA' },
-  { name: 'Torrey Pines Gliderport',    grid: 'SGX/55,22', taf: 'KNKX', lat: 32.8906, lon: -117.2528, place: 'Torrey Pines Gliderport, 2800 Torrey Pines Scenic Dr, La Jolla, CA', cam: { name: 'Torrey Pines Gliderport', url: 'https://www.flytorrey.com/weather-conditions-forecast/' } },
-  { name: 'Mt Soledad',                 grid: 'SGX/54,20', taf: 'KSAN', lat: 32.8403, lon: -117.2506, place: 'Mt Soledad National Veterans Memorial Parking, La Jolla, CA', cam: { name: 'Mt Soledad', url: 'https://www.ventusky.com/webcam-178052479' } },
-  { name: 'Coronado',                   grid: 'SGX/56,13', taf: 'KNZY', lat: 32.6956, lon: -117.1861, place: 'Coronado Dog Beach, Coronado, CA', cam: { name: 'Hotel Del Coronado', url: 'https://hdontap.com/stream/964952/hotel-del-coronado-4k-roaming-live-cam/' } },
-  { name: 'OB',                         grid: 'SGX/54,16', taf: 'KSAN', lat: 32.7521, lon: -117.2522, place: 'Ocean Beach Dog Beach Parking Lot, Voltaire St, San Diego, CA', cam: { name: 'OB Beach Cam', url: 'https://oceanbeachsandiego.com/media/ob-beach-cam' } },
-  { name: 'La Jolla Shores',            grid: 'SGX/54,21', taf: 'KSAN', lat: 32.8571, lon: -117.2573, place: 'Kellogg Park, La Jolla Shores Beach, La Jolla, CA', cam: { name: 'Scripps Pier', url: 'https://scripps.ucsd.edu/piercam' } },
-  { name: 'Presidio Park',              grid: 'SGX/56,16', taf: 'KSAN', lat: 32.7583, lon: -117.1977, place: 'Junípero Serra Museum, San Diego, CA' },
-  { name: 'Mt Helix',                   grid: 'SGX/63,15', taf: 'KNKX', lat: 32.7659, lon: -116.9990, place: 'Mt Helix Park, La Mesa, CA' },
-  { name: 'Ponto Beach',                grid: 'SGX/54,31', taf: 'KCRQ', lat: 33.0760, lon: -117.3110, place: 'Ponto Beach, Carlsbad, CA', cam: { name: 'Ponto Beach', url: 'https://www.surfoutlook.com/surfcam/sandiego/ponto' } },
-  { name: 'Del Mar',                    grid: 'SGX/55,26', taf: 'KCRQ', lat: 32.9700, lon: -117.2650, place: 'Del Mar Dog Beach, Camino del Mar, Del Mar, CA', cam: { name: 'Del Mar Overlook', url: 'https://hdontap.com/stream/101962/del-mar-beach-community-ultra-hd-overlook-live-webcvam/' } },
+  { name: 'Sunset Cliffs',              lat: 32.7157, lon: -117.2542, place: 'Sunset Cliffs Natural Park Parking, San Diego, CA' },
+  { name: 'Torrey Pines Gliderport',    lat: 32.8906, lon: -117.2528, place: 'Torrey Pines Gliderport, 2800 Torrey Pines Scenic Dr, La Jolla, CA', cam: { name: 'Torrey Pines Gliderport', url: 'https://www.flytorrey.com/weather-conditions-forecast/' } },
+  { name: 'Mt Soledad',                 lat: 32.8403, lon: -117.2506, place: 'Mt Soledad National Veterans Memorial Parking, La Jolla, CA', cam: { name: 'Mt Soledad', url: 'https://www.ventusky.com/webcam-178052479' } },
+  { name: 'Coronado',                   lat: 32.6956, lon: -117.1861, place: 'Coronado Dog Beach, Coronado, CA', cam: { name: 'Hotel Del Coronado', url: 'https://hdontap.com/stream/964952/hotel-del-coronado-4k-roaming-live-cam/' } },
+  { name: 'OB',                         lat: 32.7521, lon: -117.2522, place: 'Ocean Beach Dog Beach Parking Lot, Voltaire St, San Diego, CA', cam: { name: 'OB Beach Cam', url: 'https://oceanbeachsandiego.com/media/ob-beach-cam' } },
+  { name: 'La Jolla Shores',            lat: 32.8571, lon: -117.2573, place: 'Kellogg Park, La Jolla Shores Beach, La Jolla, CA', cam: { name: 'Scripps Pier', url: 'https://scripps.ucsd.edu/piercam' } },
+  { name: 'Presidio Park',              lat: 32.7583, lon: -117.1977, place: 'Junípero Serra Museum, San Diego, CA' },
+  { name: 'Mt Helix',                   lat: 32.7659, lon: -116.9990, place: 'Mt Helix Park, La Mesa, CA' },
+  { name: 'Ponto Beach',                lat: 33.0760, lon: -117.3110, place: 'Ponto Beach, Carlsbad, CA', cam: { name: 'Ponto Beach', url: 'https://www.surfoutlook.com/surfcam/sandiego/ponto' } },
+  { name: 'Del Mar',                    lat: 32.9700, lon: -117.2650, place: 'Del Mar Dog Beach, Camino del Mar, Del Mar, CA', cam: { name: 'Del Mar Overlook', url: 'https://hdontap.com/stream/101962/del-mar-beach-community-ultra-hd-overlook-live-webcvam/' } },
 ];
 
 const SD_LAT = 32.72, SD_LON = -117.22;
 
-function verdictFor(cloud) {
-  if (cloud < 20) return { label: 'Clear & golden', klass: 'pill-gold',   grade: 'C' };
-  if (cloud < 50) return { label: 'Great for color', klass: 'pill-coral', grade: 'A' };
-  if (cloud < 75) return { label: 'Partly cloudy',   klass: 'pill-orange', grade: 'B' };
-  if (cloud < 90) return { label: 'Hazy',            klass: 'pill-slate', grade: 'D' };
-  return              { label: 'Socked in',          klass: 'pill-stone', grade: 'D' };
+// Sample point ~80 km west of San Diego. Low clouds out there block the
+// sunlight path under a local cloud deck even when the coast itself is clear.
+const OFFSHORE = { lat: 32.85, lon: -118.10 };
+
+// ── Sunset scoring ───────────────────────────────────────────────────
+// score (0-100) = canvas × light:
+//   canvas — high/mid clouds overhead that can catch post-sunset color;
+//            best near 45% cover (0% = bland clear, 100% = gray overcast).
+//   light  — fraction of sunlight that reaches those clouds; cut by local
+//            low clouds hiding the horizon and by offshore low clouds
+//            blocking the under-lighting before it arrives.
+function scoreSunset(c) {
+  const canvas = Math.min(100, c.high + 0.5 * c.mid);
+  const canvasScore = 100 * Math.exp(-((canvas - 45) ** 2) / 2450);
+  const blockage = Math.max(c.low, 0.85 * c.offshoreLow);
+  let score = Math.round(canvasScore * (1 - blockage / 100));
+  if (c.fog) score = Math.min(score, 15);
+
+  let label;
+  if (c.fog)                    label = 'Fog';
+  else if (c.low >= 60)         label = 'Marine layer';
+  else if (c.offshoreLow >= 60) label = 'Light blocked offshore';
+  else if (c.low >= 30)         label = 'Patchy low clouds';
+  else if (canvas >= 80)        label = 'Overcast high clouds';
+  else if (canvas >= 15)        label = 'High clouds — good color';
+  else                          label = 'Clear & golden';
+  return { score, label };
 }
 
-function parseDuration(iso) {
-  const m = iso.match(/P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?/);
-  if (!m) return 0;
-  const [days, hours, mins] = [1, 2, 3].map(i => +(m[i] || 0));
-  return ((days * 24 + hours) * 60 + mins) * 60 * 1000;
+function gradeFromScore(score) {
+  if (score >= 85) return 'A+';
+  if (score >= 70) return 'A';
+  if (score >= 55) return 'B';
+  if (score >= 40) return 'C';
+  if (score >= 25) return 'D';
+  return 'F';
 }
 
-function valueAtTime(values, target) {
-  for (const entry of values) {
-    const [startStr, durStr] = entry.validTime.split('/');
-    const start = new Date(startStr);
-    const end   = new Date(start.getTime() + parseDuration(durStr));
-    if (target >= start && target < end) return entry.value;
-  }
-  return null;
-}
-
-const COVERAGE_PREFIX = {
-  patchy: 'Patchy', areas: 'Areas of', scattered: 'Scattered',
-  isolated: 'Isolated', widespread: 'Widespread', brief: 'Brief',
-  chance: 'Chance of', likely: 'Likely', slight_chance: 'Slight chance of',
-  intermittent: 'Intermittent', numerous: 'Numerous', frequent: 'Frequent',
-  occasional: 'Occasional', periods: 'Periods of', few: 'Few',
+const GRADE_KLASS = {
+  'A+': 'pill-rose', 'A': 'pill-coral', 'B': 'pill-orange',
+  'C': 'pill-gold', 'D': 'pill-slate', 'F': 'pill-stone',
 };
-
-function formatWeather(w) {
-  const wx = (w.weather || '').replace(/_/g, ' ');
-  if (!w.coverage || w.coverage === 'definite') {
-    return wx.charAt(0).toUpperCase() + wx.slice(1);
-  }
-  const prefix = COVERAGE_PREFIX[w.coverage] || w.coverage.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
-  return `${prefix} ${wx}`;
-}
-
-function blockingWeather(weatherVal) {
-  if (!Array.isArray(weatherVal)) return null;
-  const blockers = weatherVal.filter(w => w && w.weather);
-  return blockers.length ? blockers[0] : null;
-}
 
 function formatTime(d) {
   return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -664,79 +657,36 @@ async function fetchSunset(dateStr) {
   return new Date(data.results.sunset);
 }
 
-async function fetchGrid(gridKey) {
-  const r = await fetch(`https://api.weather.gov/gridpoints/${gridKey}`);
-  if (!r.ok) throw new Error(`NWS ${gridKey}: ${r.status}`);
-  const data = await r.json();
-  const props = data.properties || {};
+// One multi-location request: every spot plus the offshore point (last).
+async function fetchCloudLayers() {
+  const pts = [...SPOTS, OFFSHORE];
+  const lats = pts.map(p => p.lat).join(',');
+  const lons = pts.map(p => p.lon).join(',');
+  const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&hourly=cloud_cover_low,cloud_cover_mid,cloud_cover_high,weather_code&forecast_days=2&timezone=America%2FLos_Angeles`);
+  if (!r.ok) throw new Error(`Open-Meteo: ${r.status}`);
+  return r.json();
+}
+
+// Open-Meteo hourly times are local-ISO hours; round to the nearest hour
+// (sunset color peaks just after the listed sunset minute).
+function omIndexAt(times, date) {
+  const rounded = new Date(date.getTime() + 1800000);
+  const key = rounded.toLocaleString('sv-SE', { timeZone: 'America/Los_Angeles' }).slice(0, 13).replace(' ', 'T') + ':00';
+  return times.indexOf(key);
+}
+
+const FOG_CODES = new Set([45, 48]);
+
+function cloudsAt(result, date) {
+  const h = result.hourly;
+  const i = omIndexAt(h.time, date);
+  if (i === -1) return null;
   return {
-    skyCover: (props.skyCover && props.skyCover.values) || [],
-    weather:  (props.weather  && props.weather.values)  || [],
+    low: h.cloud_cover_low[i],
+    mid: h.cloud_cover_mid[i],
+    high: h.cloud_cover_high[i],
+    fog: FOG_CODES.has(h.weather_code[i]),
   };
-}
-
-const TAF_WORKER = 'https://sd-sunset-taf.sami-prehn.workers.dev';
-
-async function fetchTAFs(stations) {
-  try {
-    const r = await fetch(`${TAF_WORKER}/?ids=${stations.join(',')}`);
-    if (!r.ok) throw new Error(`TAF: ${r.status}`);
-    const data = await r.json();
-    const map = {};
-    for (const record of data) {
-      if (record.icaoId && !map[record.icaoId]) map[record.icaoId] = record;
-    }
-    return map;
-  } catch (e) {
-    console.warn('TAF fetch failed — falling back to NWS-only:', e);
-    return {};
-  }
-}
-
-function tafPeriodAt(tafRecord, targetMs) {
-  if (!tafRecord || !Array.isArray(tafRecord.fcsts)) return null;
-  const targetSec = Math.floor(targetMs / 1000);
-  for (const period of tafRecord.fcsts) {
-    if (period.timeFrom <= targetSec && targetSec < period.timeTo) return period;
-  }
-  return null;
-}
-
-const HEAVY_COVER = new Set(['BKN', 'OVC']);
-
-// Low thick clouds = marine layer (heavy penalty). High cirrus = bonus (catches color).
-function classifyTAF(period) {
-  if (!period || !Array.isArray(period.clouds)) return { score: 0, verdict: null };
-  const clouds = period.clouds.filter(c => c && c.base !== null);
-  const veryLow      = clouds.filter(c => c.base < 3000);
-  const low          = clouds.filter(c => c.base < 5000);
-  const high         = clouds.filter(c => c.base >= 20000);
-  const isHeavy      = c => HEAVY_COVER.has(c.cover);
-  const veryLowHeavy = veryLow.find(isHeavy);
-  const lowHeavy     = low.find(isHeavy);
-  const lowMed       = low.find(c => c.cover === 'SCT');
-  const lowLight     = low.find(c => c.cover === 'FEW');
-  const highHeavy    = high.find(isHeavy);
-
-  let score = 0;
-  let verdict = null;
-  if (veryLowHeavy) {
-    score += 60;
-    verdict = { label: 'Marine layer', klass: 'pill-stone', grade: 'F' };
-  } else if (lowHeavy) {
-    score += 40;
-    verdict = { label: `Low clouds (${lowHeavy.base}ft)`, klass: 'pill-slate', grade: 'D' };
-  } else if (lowMed) {
-    score += 20;
-    verdict = { label: `Patchy low clouds (${lowMed.base}ft)`, klass: 'pill-slate', grade: 'C-' };
-  } else if (lowLight) {
-    score += 10;
-  }
-  if (highHeavy && !veryLowHeavy && !lowHeavy) {
-    score -= 15;
-    if (!verdict) verdict = { label: 'Cirrus — best color', klass: 'pill-rose', grade: 'A+' };
-  }
-  return { score, verdict };
 }
 
 function isoDate(d) {
@@ -822,36 +772,20 @@ function loadSatellite() {
   document.getElementById('satImg').style.backgroundImage = `url("${url}")`;
 }
 
-const FOG_PENALTY = 35;
-
-function computeSpots(sunsetTime, gridMap, tafMap) {
+function computeSpots(sunsetTime, cloudData) {
+  const offshore = cloudsAt(cloudData[cloudData.length - 1], sunsetTime);
   return SPOTS
-    .map(s => {
-      const g = gridMap[s.grid];
-      const cloud    = valueAtTime(g.skyCover, sunsetTime);
-      const blocker  = blockingWeather(valueAtTime(g.weather, sunsetTime));
-      const tafCls   = classifyTAF(tafPeriodAt(tafMap[s.taf], sunsetTime.getTime()));
-      return { ...s, cloud, blocker, tafCls };
+    .map((s, i) => {
+      const c = cloudsAt(cloudData[i], sunsetTime);
+      if (!c) return null;
+      c.offshoreLow = offshore ? offshore.low : 0;
+      const { score, label } = scoreSunset(c);
+      const grade = gradeFromScore(score);
+      return { ...s, clouds: c, score, grade, verdict: { label, klass: GRADE_KLASS[grade] } };
     })
-    .filter(s => s.cloud !== null)
-    .map(s => {
-      // TAF verdict wins when it fires (it has better cloud-layer info).
-      // Otherwise fall back to NWS weather keywords, then cloud-% threshold.
-      let verdict;
-      if (s.tafCls.verdict)      verdict = s.tafCls.verdict;
-      else if (s.blocker)        verdict = { label: formatWeather(s.blocker), klass: 'pill-stone', grade: 'D' };
-      else                       verdict = verdictFor(s.cloud);
-
-      // Penalties: TAF is authoritative; only add NWS fog penalty if TAF didn't already flag it.
-      let score = Math.abs(s.cloud - 40) + s.tafCls.score;
-      if (s.blocker && !s.tafCls.verdict) score += FOG_PENALTY;
-
-      return { ...s, verdict, score, grade: verdict.grade };
-    })
-    .sort((a, b) => (GRADE_RANK[a.grade] - GRADE_RANK[b.grade]) || (a.score - b.score));
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score);
 }
-
-const GRADE_RANK = { 'A+': 0, 'A': 1, 'B': 2, 'C': 3, 'C-': 4, 'D': 5, 'F': 6 };
 
 const DAY_DATA = { today: null, tomorrow: null };
 let activeDayKey = 'today';
@@ -870,7 +804,7 @@ function renderList(spots) {
           <div class="spot-name">${s.name}</div>
           <div class="meta">
             <span class="pill ${s.verdict.klass}">${s.verdict.label}</span>
-            <span class="meta-pct">${s.cloud}% clouds</span>
+            <span class="meta-pct">${s.clouds.high}% high · ${s.clouds.low}% low</span>
             <a class="directions" href="${mapUrl}" target="_blank" rel="noopener">Directions ↗</a>
             ${s.cam ? `<a class="directions" href="${s.cam.url}" target="_blank" rel="noopener">📹 Webcam ↗</a>` : ''}
           </div>
@@ -920,22 +854,16 @@ async function load() {
     fetchSunset(isoDate(tomorrow)),
   ]);
 
-  const uniqueGrids = [...new Set(SPOTS.map(s => s.grid))];
-  const uniqueTafs  = [...new Set(SPOTS.map(s => s.taf))];
-  const [gridResults, tafMap] = await Promise.all([
-    Promise.all(uniqueGrids.map(fetchGrid)),
-    fetchTAFs(uniqueTafs),
-  ]);
-  const gridMap = Object.fromEntries(uniqueGrids.map((g, i) => [g, gridResults[i]]));
+  const cloudData = await fetchCloudLayers();
 
   DAY_DATA.today = {
     sunset: todaySunset,
-    spots: computeSpots(todaySunset, gridMap, tafMap),
+    spots: computeSpots(todaySunset, cloudData),
     eyebrow: 'San Diego Sunset Tonight',
   };
   DAY_DATA.tomorrow = {
     sunset: tomorrowSunset,
-    spots: computeSpots(tomorrowSunset, gridMap, tafMap),
+    spots: computeSpots(tomorrowSunset, cloudData),
     eyebrow: `San Diego Sunset ${weekdayName(tomorrowSunset)}`,
   };
 

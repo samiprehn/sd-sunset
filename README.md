@@ -4,35 +4,28 @@ Tonight's best San Diego sunset viewpoint, ranked.
 
 **Live:** https://samiprehn.github.io/sd-sunset/
 
-For each evening of the week, ranks 10 SD viewpoints by how good their sunset is likely to be. Each spot shows a letter grade (A+ through F), forecast cloud %, a verdict ("Cirrus — best color", "Marine layer", etc.), Google Maps directions, and a nearby live webcam.
+For each evening, ranks 10 SD viewpoints by how good their sunset is likely to be. Each spot shows a letter grade (A+ through F), layered cloud %, a verdict ("High clouds — good color", "Marine layer", etc.), Google Maps directions, and a nearby live webcam.
 
 ## How the grade works
 
-Two data sources are combined per spot:
+Each spot gets a 0–100 score from Open-Meteo's layered cloud forecast (low / mid / high cover per spot, hourly), evaluated at the hour nearest sunset:
 
-1. **NWS gridpoint cloud cover** at the moment of sunset (one gridpoint per spot, hardcoded)
-2. **TAF** (terminal aerodrome forecast) from the nearest airport — gives layered cloud info that NWS doesn't expose
+```
+canvas   = min(100, high + 0.5 × mid)        # clouds that can catch color
+canvas → gaussian peaking at 45% cover        # 0% = bland, 100% = gray overcast
+blockage = max(local low, 0.85 × offshore low)
+score    = canvasScore × (1 − blockage/100)   # capped at 15 if fog
+```
 
-The TAF classifier is the interesting bit: it categorizes clouds into very-low (<3,000 ft, marine layer), low-mid (3,000–5,000 ft, blocks color from below), and high (≥20,000 ft, catches and reflects pink/gold). When TAF says "high cirrus over a clear lower sky," that's an A+ — the sweet spot.
+The offshore term is the interesting bit: sunset color happens when light sneaks *under* the cloud deck from beyond the horizon, so low clouds at a sample point ~80 km west block the show even when the coast itself is clear. Local low clouds (marine layer) hide the horizon directly.
 
-Cloud-percentage falls back to NWS only:
-
-| Range | Verdict | Grade |
-|---|---|---|
-| <20% | Clear & golden | C |
-| 20–50% | Great for color | A |
-| 50–75% | Partly cloudy | B |
-| 75–90% | Hazy | D |
-| 90%+ | Socked in | D |
-
-The full A+ tier is reserved for the TAF "high cirrus over clear" case. Note that fully-clear is graded *worse* than partly-cloudy — sunset color needs clouds to catch the light.
+Score bands: A+ ≥85, A ≥70, B ≥55, C ≥40, D ≥25, F below. Fully-clear scores ~44 (C) — sunset color needs clouds to catch the light.
 
 ## Stack
 
 Single-file HTML, fully client-side. No build, no dependencies.
 
-- **NWS gridpoint API** — keyless, CORS-friendly
-- **TAF data via a small Cloudflare Worker** at `sd-sunset-taf.sami-prehn.workers.dev` (CORS-proxies aviationweather.gov)
+- **Open-Meteo forecast API** — keyless, CORS-friendly; one multi-location request covers all 10 spots + the offshore point
 - **GOES-18 satellite imagery** as a live cloud-check before driving out
 - **Sunrise-sunset.org** for the moment of sunset per day
 - **Inline SVG map** of San Diego with viewpoints positioned by lat/lon
@@ -41,7 +34,7 @@ Single-file HTML, fully client-side. No build, no dependencies.
 
 Optional GitHub Actions workflow that pings ntfy when any spot grades A+ on the day:
 
-- `check_sunset.py` — Python port of the verdict logic, runs on a cron at 7am / 11am / 3pm Pacific
+- `check_sunset.py` — Python port of the scoring logic, runs on a cron at 7am / 11am / 3pm Pacific
 - `seen.json` — committed back by the action so you only get one notification per day
 - Requires `NTFY_TOPIC` repo secret
 
@@ -53,12 +46,12 @@ The notification links straight to the live page.
 open index.html
 ```
 
-NWS and the TAF Worker both send CORS headers, so `file://` works.
+Open-Meteo sends CORS headers, so `file://` works.
 
 ## Files
 
 - `index.html` — the site
-- `worker.js` — Cloudflare Worker source for the TAF proxy
+- `worker.js` — Cloudflare Worker source for the old TAF proxy (no longer used by the site; still deployed for the sunset_mode extension)
 - `check_sunset.py` — alert script
 - `.github/workflows/sunset-alerts.yml` — cron config
 - `seen.json` — alert de-dup state

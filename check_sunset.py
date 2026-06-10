@@ -1,19 +1,20 @@
 """Sunset alerts.
 
 Once per day, checks tonight's sunset forecast for every viewpoint in sd_sunset.
-If any spot grades A+ ("Cirrus — best color"), sends a single ntfy notification
-linking to the live site. Run from a GitHub Actions cron a few times per day;
-state is de-duped via seen.json so only one alert fires per calendar date.
+If any spot grades A+ (score >= 85), sends a single ntfy notification linking to
+the live site. Run from a GitHub Actions cron a few times per day; state is
+de-duped via seen.json so only one alert fires per calendar date.
 
-Mirrors the verdict logic from index.html (classifyTAF + verdictFor + gradeFor).
+Mirrors the scoring logic from index.html (scoreSunset + gradeFromScore).
 """
 
 import datetime as dt
 import json
+import math
 import os
-import re
 
 import requests
+from zoneinfo import ZoneInfo
 
 NTFY_TOPIC = os.environ['NTFY_TOPIC']
 SITE_URL = 'https://samiprehn.github.io/sd-sunset/'
@@ -21,19 +22,22 @@ SD_LAT, SD_LON = 32.72, -117.22
 SEEN_FILE = 'seen.json'
 
 SPOTS = [
-    {'name': 'Sunset Cliffs',           'grid': 'SGX/53,14', 'taf': 'KSAN'},
-    {'name': 'Torrey Pines Gliderport', 'grid': 'SGX/55,22', 'taf': 'KNKX'},
-    {'name': 'Mt Soledad',              'grid': 'SGX/54,20', 'taf': 'KSAN'},
-    {'name': 'Coronado',                'grid': 'SGX/56,13', 'taf': 'KNZY'},
-    {'name': 'OB',                      'grid': 'SGX/54,16', 'taf': 'KSAN'},
-    {'name': 'La Jolla Shores',         'grid': 'SGX/54,21', 'taf': 'KSAN'},
-    {'name': 'Presidio Park',           'grid': 'SGX/56,16', 'taf': 'KSAN'},
-    {'name': 'Mt Helix',                'grid': 'SGX/63,15', 'taf': 'KNKX'},
-    {'name': 'Ponto Beach',             'grid': 'SGX/54,31', 'taf': 'KCRQ'},
-    {'name': 'Del Mar',                 'grid': 'SGX/55,26', 'taf': 'KCRQ'},
+    {'name': 'Sunset Cliffs',           'lat': 32.7157, 'lon': -117.2542},
+    {'name': 'Torrey Pines Gliderport', 'lat': 32.8906, 'lon': -117.2528},
+    {'name': 'Mt Soledad',              'lat': 32.8403, 'lon': -117.2506},
+    {'name': 'Coronado',                'lat': 32.6956, 'lon': -117.1861},
+    {'name': 'OB',                      'lat': 32.7521, 'lon': -117.2522},
+    {'name': 'La Jolla Shores',         'lat': 32.8571, 'lon': -117.2573},
+    {'name': 'Presidio Park',           'lat': 32.7583, 'lon': -117.1977},
+    {'name': 'Mt Helix',                'lat': 32.7659, 'lon': -116.9990},
+    {'name': 'Ponto Beach',             'lat': 33.0760, 'lon': -117.3110},
+    {'name': 'Del Mar',                 'lat': 32.9700, 'lon': -117.2650},
 ]
 
-UA = {'User-Agent': 'sunset-alerts (sami.prehn@gmail.com)'}
+# Low clouds ~80 km offshore block the sunlight path before it arrives.
+OFFSHORE = {'lat': 32.85, 'lon': -118.10}
+
+FOG_CODES = {45, 48}
 
 
 # ── State ────────────────────────────────────────────────────────────
@@ -50,33 +54,6 @@ def save_state(state):
         json.dump(state, f, indent=2)
 
 
-# ── Time helpers ─────────────────────────────────────────────────────
-def parse_iso(s):
-    # Python <3.11 doesn't accept 'Z'; normalize
-    return dt.datetime.fromisoformat(s.replace('Z', '+00:00'))
-
-
-_DUR_RE = re.compile(r'P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?')
-
-def parse_duration_seconds(iso):
-    m = _DUR_RE.match(iso)
-    if not m:
-        return 0
-    d, h, mn = (int(x) if x else 0 for x in m.groups())
-    return ((d * 24 + h) * 60 + mn) * 60
-
-
-def value_at_time(values, target_dt):
-    """NWS gridpoint values are [{validTime: 'ISO/duration', value}]."""
-    for entry in values:
-        start_str, dur_str = entry['validTime'].split('/')
-        start = parse_iso(start_str)
-        end = start + dt.timedelta(seconds=parse_duration_seconds(dur_str))
-        if start <= target_dt < end:
-            return entry['value']
-    return None
-
-
 # ── Data fetches ─────────────────────────────────────────────────────
 def fetch_sunset(date_iso):
     r = requests.get(
@@ -85,132 +62,74 @@ def fetch_sunset(date_iso):
         timeout=30,
     )
     r.raise_for_status()
-    return parse_iso(r.json()['results']['sunset'])
+    return dt.datetime.fromisoformat(r.json()['results']['sunset'].replace('Z', '+00:00'))
 
 
-def fetch_grid(grid):
-    r = requests.get(f'https://api.weather.gov/gridpoints/{grid}', headers=UA, timeout=30)
-    r.raise_for_status()
-    props = r.json().get('properties', {})
-    return {
-        'skyCover': (props.get('skyCover') or {}).get('values', []),
-        'weather':  (props.get('weather')  or {}).get('values', []),
-    }
-
-
-def fetch_tafs(stations):
-    ids = ','.join(sorted(set(stations)))
+def fetch_cloud_layers():
+    """One multi-location request: every spot plus the offshore point (last)."""
+    pts = SPOTS + [OFFSHORE]
     r = requests.get(
-        'https://aviationweather.gov/api/data/taf',
-        params={'ids': ids, 'format': 'json'},
+        'https://api.open-meteo.com/v1/forecast',
+        params={
+            'latitude': ','.join(str(p['lat']) for p in pts),
+            'longitude': ','.join(str(p['lon']) for p in pts),
+            'hourly': 'cloud_cover_low,cloud_cover_mid,cloud_cover_high,weather_code',
+            'forecast_days': 2,
+            'timezone': 'America/Los_Angeles',
+        },
         timeout=30,
     )
     r.raise_for_status()
-    out = {}
-    for rec in r.json():
-        icao = rec.get('icaoId')
-        if icao and icao not in out:
-            out[icao] = rec
-    return out
+    return r.json()
 
 
-# ── Verdict (mirrors index.html) ─────────────────────────────────────
-def taf_period_at(rec, target_unix):
-    if not rec or not isinstance(rec.get('fcsts'), list):
+def clouds_at(result, local_dt):
+    """local_dt must already be in America/Los_Angeles; rounds to nearest hour."""
+    rounded = local_dt + dt.timedelta(minutes=30)
+    key = rounded.strftime('%Y-%m-%dT%H:00')
+    h = result['hourly']
+    try:
+        i = h['time'].index(key)
+    except ValueError:
         return None
-    for p in rec['fcsts']:
-        if p.get('timeFrom', 0) <= target_unix < p.get('timeTo', 0):
-            return p
-    return None
+    return {
+        'low': h['cloud_cover_low'][i],
+        'mid': h['cloud_cover_mid'][i],
+        'high': h['cloud_cover_high'][i],
+        'fog': h['weather_code'][i] in FOG_CODES,
+    }
 
 
-def classify_taf(period):
-    """Returns (score_delta, verdict_label_or_None)."""
-    if not period or not isinstance(period.get('clouds'), list):
-        return 0, None
-    clouds = [c for c in period['clouds'] if c and c.get('base') is not None]
-    very_low = [c for c in clouds if c['base'] < 3000]
-    low      = [c for c in clouds if c['base'] < 5000]
-    high     = [c for c in clouds if c['base'] >= 20000]
+# ── Scoring (mirrors index.html) ─────────────────────────────────────
+def score_sunset(c):
+    canvas = min(100, c['high'] + 0.5 * c['mid'])
+    canvas_score = 100 * math.exp(-((canvas - 45) ** 2) / 2450)
+    blockage = max(c['low'], 0.85 * c['offshore_low'])
+    score = round(canvas_score * (1 - blockage / 100))
+    if c['fog']:
+        score = min(score, 15)
 
-    very_low_heavy = next((c for c in very_low if c['cover'] in ('BKN', 'OVC')), None)
-    low_heavy      = next((c for c in low      if c['cover'] in ('BKN', 'OVC')), None)
-    low_med        = next((c for c in low      if c['cover'] == 'SCT'), None)
-    low_light      = next((c for c in low      if c['cover'] == 'FEW'), None)
-    high_heavy     = next((c for c in high     if c['cover'] in ('BKN', 'OVC')), None)
-
-    score = 0
-    verdict = None
-    if very_low_heavy:
-        score += 60
-        verdict = 'Marine layer'
-    elif low_heavy:
-        score += 40
-        verdict = f"Low clouds ({low_heavy['base']}ft)"
-    elif low_med:
-        score += 20
-        verdict = f"Patchy low clouds ({low_med['base']}ft)"
-    elif low_light:
-        score += 10
-    if high_heavy and not very_low_heavy and not low_heavy:
-        score -= 15
-        if not verdict:
-            verdict = 'Cirrus — best color'
-    return score, verdict
+    if c['fog']:                    label = 'Fog'
+    elif c['low'] >= 60:            label = 'Marine layer'
+    elif c['offshore_low'] >= 60:   label = 'Light blocked offshore'
+    elif c['low'] >= 30:            label = 'Patchy low clouds'
+    elif canvas >= 80:              label = 'Overcast high clouds'
+    elif canvas >= 15:              label = 'High clouds — good color'
+    else:                           label = 'Clear & golden'
+    return score, label
 
 
-def verdict_for_cloud(cloud):
-    if cloud < 20: return 'Clear & golden'
-    if cloud < 50: return 'Great for color'
-    if cloud < 75: return 'Partly cloudy'
-    if cloud < 90: return 'Hazy'
-    return 'Socked in'
-
-
-def grade_for(label):
-    if label == 'Cirrus — best color': return 'A+'
-    if label == 'Great for color':     return 'A'
-    if label == 'Partly cloudy':       return 'B'
-    if label == 'Clear & golden':      return 'C'
-    if label == 'Hazy':                return 'D'
-    if label.startswith('Low clouds'): return 'D'
-    if label.startswith('Patchy low'): return 'C-'
-    if label == 'Marine layer':        return 'F'
-    if label == 'Socked in':           return 'D'
-    return 'D'
-
-
-def blocking_weather(weather_val):
-    if not isinstance(weather_val, list):
-        return None
-    for w in weather_val:
-        if w and w.get('weather'):
-            return w
-    return None
+def grade_from_score(score):
+    if score >= 85: return 'A+'
+    if score >= 70: return 'A'
+    if score >= 55: return 'B'
+    if score >= 40: return 'C'
+    if score >= 25: return 'D'
+    return 'F'
 
 
 # ── Main ─────────────────────────────────────────────────────────────
-def evaluate_spot(spot, sunset_dt, grid_data, taf_record):
-    cloud = value_at_time(grid_data['skyCover'], sunset_dt)
-    if cloud is None:
-        return None
-    period = taf_period_at(taf_record, int(sunset_dt.timestamp()))
-    _, taf_verdict = classify_taf(period)
-    blocker = blocking_weather(value_at_time(grid_data['weather'], sunset_dt))
-
-    if taf_verdict:
-        label = taf_verdict
-    elif blocker:
-        label = (blocker.get('weather') or '').replace('_', ' ').capitalize() or 'Unknown'
-    else:
-        label = verdict_for_cloud(cloud)
-
-    return {
-        'spot': spot['name'],
-        'grade': grade_for(label),
-        'label': label,
-        'cloud': cloud,
-    }
+PACIFIC = ZoneInfo('America/Los_Angeles')
 
 
 def main():
@@ -223,34 +142,35 @@ def main():
         return
 
     sunset_dt = fetch_sunset(today_iso)
-    print(f'Sunset {today_iso}: {sunset_dt.isoformat()}')
+    sunset_local = sunset_dt.astimezone(PACIFIC)
+    print(f'Sunset {today_iso}: {sunset_local.isoformat()}')
 
-    grids = {}
-    for s in SPOTS:
-        if s['grid'] not in grids:
-            grids[s['grid']] = fetch_grid(s['grid'])
-
-    tafs = fetch_tafs([s['taf'] for s in SPOTS])
+    cloud_data = fetch_cloud_layers()
+    offshore = clouds_at(cloud_data[-1], sunset_local)
+    offshore_low = offshore['low'] if offshore else 0
 
     a_plus = []
-    for s in SPOTS:
-        r = evaluate_spot(s, sunset_dt, grids[s['grid']], tafs.get(s['taf']))
-        if r is None:
-            print(f"  {s['name']}: no forecast")
+    for spot, result in zip(SPOTS, cloud_data):
+        c = clouds_at(result, sunset_local)
+        if c is None:
+            print(f"  {spot['name']}: no forecast")
             continue
-        print(f"  {s['name']}: {r['grade']} ({r['label']}, {r['cloud']}% NWS)")
-        if r['grade'] == 'A+':
-            a_plus.append(r)
+        c['offshore_low'] = offshore_low
+        score, label = score_sunset(c)
+        grade = grade_from_score(score)
+        print(f"  {spot['name']}: {grade} ({score} — {label}, "
+              f"low {c['low']}% / high {c['high']}%, offshore {offshore_low}%)")
+        if grade == 'A+':
+            a_plus.append({'spot': spot['name'], 'score': score})
 
     if not a_plus:
         print('No A+ spots tonight; no alert.')
         return
 
     spot_list = ', '.join(r['spot'] for r in a_plus)
-    sunset_local = sunset_dt.astimezone(dt.timezone(dt.timedelta(hours=-7)))  # PDT-ish; tz-naive display
     time_str = sunset_local.strftime('%-I:%M%p').lower()
     title = '🌅 A+ sunset tonight'
-    message = f'{spot_list} · sunset {time_str} · high cirrus over a clear lower sky'
+    message = f'{spot_list} · sunset {time_str} · high clouds over a clear horizon'
 
     # Publish via JSON body — HTTP headers are latin-1 only, so emoji-in-title
     # breaks header-style ntfy posts. JSON body is UTF-8.
