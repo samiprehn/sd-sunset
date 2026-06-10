@@ -51,7 +51,7 @@ Open-Meteo sends CORS headers, so `file://` works.
 ## Files
 
 - `index.html` — the site
-- `worker.js` — Cloudflare Worker source for the old TAF proxy (no longer used by the site; still deployed for the sunset_mode extension)
+- `worker.js` — Cloudflare Worker source for the old TAF proxy (no longer used; safe to undeploy)
 - `check_sunset.py` — alert script
 - `.github/workflows/sunset-alerts.yml` — cron config
 - `seen.json` — alert de-dup state
