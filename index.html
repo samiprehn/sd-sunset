@@ -596,14 +596,17 @@ const OFFSHORE = { lat: 32.85, lon: -118.10 };
 // ── Sunset scoring ───────────────────────────────────────────────────
 // score (0-100) = canvas × light:
 //   canvas — high/mid clouds overhead that can catch post-sunset color;
-//            best near 45% cover (0% = bland clear, 100% = gray overcast).
+//            best near 65% cover. Thin high cirrus stays a good canvas even
+//            at full cover (0% = bland clear, 100% = still colorful, not gray).
 //   light  — fraction of sunlight that reaches those clouds; cut by local
 //            low clouds hiding the horizon and by offshore low clouds
-//            blocking the under-lighting before it arrives.
+//            blocking the under-lighting before it arrives. Offshore low is
+//            an unreliable blocker (color often still arrives), so weighted
+//            lightly — it dims the score rather than killing it.
 function scoreSunset(c) {
   const canvas = Math.min(100, c.high + 0.5 * c.mid);
-  const canvasScore = 100 * Math.exp(-((canvas - 45) ** 2) / 2450);
-  const blockage = Math.max(c.low, 0.85 * c.offshoreLow);
+  const canvasScore = 100 * Math.exp(-((canvas - 65) ** 2) / 4900);
+  const blockage = Math.max(c.low, 0.35 * c.offshoreLow);
   let score = Math.round(canvasScore * (1 - blockage / 100));
   if (c.fog) score = Math.min(score, 15);
 

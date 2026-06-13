@@ -103,8 +103,8 @@ def clouds_at(result, local_dt):
 # ── Scoring (mirrors index.html) ─────────────────────────────────────
 def score_sunset(c):
     canvas = min(100, c['high'] + 0.5 * c['mid'])
-    canvas_score = 100 * math.exp(-((canvas - 45) ** 2) / 2450)
-    blockage = max(c['low'], 0.85 * c['offshore_low'])
+    canvas_score = 100 * math.exp(-((canvas - 65) ** 2) / 4900)
+    blockage = max(c['low'], 0.35 * c['offshore_low'])
     score = round(canvas_score * (1 - blockage / 100))
     if c['fog']:
         score = min(score, 15)
