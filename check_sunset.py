@@ -133,7 +133,7 @@ PACIFIC = ZoneInfo('America/Los_Angeles')
 
 
 def main():
-    today = dt.date.today()
+    today = dt.datetime.now(PACIFIC).date()
     today_iso = today.isoformat()
     state = load_state()
 
