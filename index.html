@@ -653,12 +653,14 @@ async function fetchSunset(dateStr) {
 }
 
 // One multi-location request: every spot, then each extra point (light-path
-// samples) in order.
+// samples) in order. ECMWF rather than the default (HRRR here): backtested on
+// Nov 2026 sunsets, HRRR invented a solid offshore bank on a great evening
+// while ECMWF ranked the known-good evenings correctly.
 async function fetchCloudLayers(extraPts) {
   const pts = [...SPOTS, ...extraPts];
   const lats = pts.map(p => p.lat.toFixed(3)).join(',');
   const lons = pts.map(p => p.lon.toFixed(3)).join(',');
-  const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&hourly=cloud_cover_low,cloud_cover_mid,cloud_cover_high,weather_code&forecast_days=3&timezone=America%2FLos_Angeles`);
+  const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&hourly=cloud_cover_low,cloud_cover_mid,cloud_cover_high,weather_code&forecast_days=3&timezone=America%2FLos_Angeles&models=ecmwf_ifs025`);
   if (!r.ok) throw new Error(`Open-Meteo: ${r.status}`);
   return r.json();
 }

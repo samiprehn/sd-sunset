@@ -116,6 +116,7 @@ def fetch_cloud_layers(extra_pts):
             'longitude': ','.join(f"{p['lon']:.3f}" for p in pts),
             'hourly': 'cloud_cover_low,cloud_cover_mid,cloud_cover_high,weather_code',
             'forecast_days': 2,
+            'models': 'ecmwf_ifs025',
             'timezone': 'America/Los_Angeles',
         },
         timeout=30,
