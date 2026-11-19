@@ -233,11 +233,11 @@
 
   .pin-label {
     font-family: 'Inter', -apple-system, sans-serif;
-    font-size: 28px;
+    font-size: 21px;
     font-weight: 600;
     fill: #1e3448;
-    stroke: rgba(255, 255, 255, 0.75);
-    stroke-width: 5px;
+    stroke: rgba(255, 255, 255, 0.85);
+    stroke-width: 4px;
     paint-order: stroke;
     cursor: pointer;
   }
@@ -482,72 +482,16 @@
             <span>Where they are</span>
             <span class="map-attrib">Tap a pin</span>
           </div>
-          <svg class="map-svg" viewBox="0 0 740 1000" id="mapSvg" aria-label="Stylized map of San Diego viewpoints">
+          <svg class="map-svg" id="mapSvg" aria-label="Map of San Diego viewpoints">
             <defs>
               <filter id="pin-glow" x="-60%" y="-60%" width="220%" height="220%">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="8"/>
+                <feGaussianBlur in="SourceGraphic" stdDeviation="6"/>
               </filter>
             </defs>
-
-            <!-- Water: Pacific + bays fill the tile in sky blue; land gets painted over -->
-            <rect width="740" height="1000" fill="#9dc9de"/>
-
-            <!-- Mainland + Point Loma as one continuous shape, traced roughly from OSM: Pacific coast
-                 north-to-south, wrapping a narrow Point Loma peninsula, then back up the east side of
-                 SD Bay through downtown / National City, and out east to the map edge. -->
-            <path fill="#c3dfb5" d="
-              M 55 0
-              Q 65 30 78 65
-              Q 100 115 120 160
-              Q 140 200 150 240
-              Q 155 290 155 335
-              Q 165 375 180 420
-              Q 188 460 190 490
-              Q 175 520 165 555
-              Q 135 575 120 600
-              Q 128 635 150 660
-              Q 170 688 178 718
-              Q 180 748 190 775
-              Q 180 805 188 840
-              Q 178 865 184 895
-              Q 188 940 208 970
-              L 212 988
-              L 234 988
-              Q 244 962 242 918
-              Q 242 882 236 862
-              Q 240 848 264 848
-              Q 310 832 350 828
-              Q 405 832 438 875
-              Q 462 918 453 960
-              L 460 990
-              L 500 1000
-              L 740 1000
-              L 740 0
-              Z
-            "/>
-
-            <!-- Mission Bay (water pocket cut into mainland — roughly 2mi across in reality) -->
-            <ellipse cx="224" cy="750" rx="38" ry="32" fill="#9dc9de"/>
-
-            <!-- Coronado — bigger half-dome, the bay wraps uniformly around it -->
-            <path fill="#c3dfb5" d="
-              M 280 935
-              A 60 75 0 0 1 400 935
-              Z
-            "/>
-
-            <!-- Silver Strand trailing south off the bottom-right corner of Coronado -->
-            <path fill="#c3dfb5" d="
-              M 400 935
-              L 410 1000
-              L 388 1000
-              L 380 935
-              Z
-            "/>
-
-            <text x="32" y="36" fill="rgba(30, 52, 72, 0.7)" font-size="18" font-family="Inter, sans-serif" font-weight="500" letter-spacing="2">↑ N</text>
-            <text x="40" y="992" fill="rgba(30, 52, 72, 0.45)" font-size="14" font-family="Inter, sans-serif" letter-spacing="3">PACIFIC</text>
+            <rect id="mapWater" fill="#d4dadc"/>
+            <g id="mapTiles"></g>
             <g id="mapPins"></g>
+            <text id="mapCredit" text-anchor="end" fill="rgba(30, 52, 72, 0.6)" font-size="8" font-family="Inter, sans-serif">Tiles © Esri</text>
           </svg>
         </section>
         <section class="sky-now">
@@ -561,7 +505,7 @@
     </div>
     <footer>
       <p class="caveat">
-        Scored 0–100 per spot from layered cloud forecasts: high and mid clouds overhead are the color canvas (best near 45% cover), then the score is cut by low clouds hiding the horizon — locally or 80 km offshore, where they block the light path before it arrives. Clear skies grade a C: sunset color needs clouds to catch the light.
+        Scored 0–100 per spot from layered cloud forecasts ~15 min after sunset: high and mid clouds overhead are the color canvas (best near half cover; thick gray decks score low), then the score is cut by low clouds hiding the horizon and by cloud 50–300 km out along the sunset direction, which blocks the light before it can reach the canvas. Clear skies grade a C: sunset color needs clouds to catch the light.
       </p>
       <div style="text-align: center;">
         <a class="bmc" href="https://buymeacoffee.com/samiprehn" target="_blank" rel="noopener">Keep this page running</a>
@@ -589,35 +533,73 @@ const SPOTS = [
 
 const SD_LAT = 32.72, SD_LON = -117.22;
 
-// Sample point ~80 km west of San Diego. Low clouds out there block the
-// sunlight path under a local cloud deck even when the coast itself is clear.
-const OFFSHORE = { lat: 32.85, lon: -118.10 };
+// ── Sun position (shared by the sunset azimuth and the horizon preview) ──
+const PI = Math.PI, RAD = PI / 180, OBL = RAD * 23.4397;
+const toDays = (d) => d.getTime() / 86400000 - 0.5 + 2440588 - 2451545;
+function sunEcliptic(date) {
+  const d = toDays(date);
+  const M = RAD * (357.5291 + 0.98560028 * d);
+  const C = RAD * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2*M) + 0.0003 * Math.sin(3*M));
+  const L = M + C + RAD * 102.9372 + PI;
+  return {
+    d,
+    dec: Math.asin(Math.sin(OBL) * Math.sin(L)),
+    ra: Math.atan2(Math.sin(L) * Math.cos(OBL), Math.cos(L)),
+  };
+}
+
+// Degrees clockwise from north where the sun meets the horizon — ~240° (WSW)
+// in December, ~300° (WNW) in June.
+function sunsetAzimuth(date) {
+  const { dec } = sunEcliptic(date);
+  return 360 - Math.acos(Math.sin(dec) / Math.cos(RAD * SD_LAT)) / RAD;
+}
+
+// Light path: sample points out along the sunset azimuth. Sunset color is
+// sunlight sneaking under the cloud canvas from beyond the horizon, so a
+// cloud deck out along that line leaves the sky gray even if the coast is
+// clear. Nearer points weigh more (low clouds there block the most).
+const PATH_KM = [50, 150, 300];
+const PATH_WEIGHTS = [0.4, 0.35, 0.25];
+
+function pathPoints(az) {
+  return PATH_KM.map(km => ({
+    lat: SD_LAT + (km / 111) * Math.cos(az * RAD),
+    lon: SD_LON + (km / (111 * Math.cos(SD_LAT * RAD))) * Math.sin(az * RAD),
+  }));
+}
+
+// How opaque one path point is to sunlight: low clouds block fully, mid
+// decks mostly, high cirrus is largely translucent.
+const pathOpacity = (c) => Math.max(c.low, 0.7 * c.mid, 0.3 * c.high);
 
 // ── Sunset scoring ───────────────────────────────────────────────────
 // score (0-100) = canvas × light:
-//   canvas — high/mid clouds overhead that can catch post-sunset color;
-//            best near 65% cover. Thin high cirrus stays a good canvas even
-//            at full cover (0% = bland clear, 100% = still colorful, not gray).
-//   light  — fraction of sunlight that reaches those clouds; cut by local
-//            low clouds hiding the horizon and by offshore low clouds
-//            blocking the under-lighting before it arrives. Offshore low is
-//            an unreliable blocker (color often still arrives), so weighted
-//            lightly — it dims the score rather than killing it.
+//   canvas — high + mid clouds overhead that catch post-sunset color
+//            (combined as overlapping layers). Best near 55% cover; clear
+//            sky is a bland C, full thin cirrus a B. Thick mid decks
+//            (altostratus) are gray rather than colorful, so they're cut.
+//   light  — fraction of sunlight that reaches the canvas: cut by local low
+//            clouds hiding the horizon and by cloud out along the light path.
 function scoreSunset(c) {
-  const canvas = Math.min(100, c.high + 0.5 * c.mid);
-  const canvasScore = 100 * Math.exp(-((canvas - 65) ** 2) / 4900);
-  const blockage = Math.max(c.low, 0.35 * c.offshoreLow);
-  let score = Math.round(canvasScore * (1 - blockage / 100));
-  if (c.fog) score = Math.min(score, 15);
+  const canvas = 100 - (100 - c.high) * (100 - c.mid) / 100;
+  let canvasScore = 40 + 60 * Math.exp(-((canvas - 55) ** 2) / 1600);
+  if (c.mid > 60) canvasScore *= 1 - 0.5 * (c.mid - 60) / 40;
+  const light = (1 - 0.9 * c.low / 100) * (1 - 0.85 * c.pathBlock / 100);
+  let score = Math.round(canvasScore * light);
+  if (c.rain) score = Math.min(score, 20);
+  if (c.fog)  score = Math.min(score, 15);
 
   let label;
-  if (c.fog)                    label = 'Fog';
-  else if (c.low >= 60)         label = 'Marine layer';
-  else if (c.offshoreLow >= 60) label = 'Light blocked offshore';
-  else if (c.low >= 30)         label = 'Patchy low clouds';
-  else if (canvas >= 80)        label = 'Overcast high clouds';
-  else if (canvas >= 15)        label = 'High clouds — good color';
-  else                          label = 'Clear & golden';
+  if (c.fog)                  label = 'Fog';
+  else if (c.rain)            label = 'Rain';
+  else if (c.low >= 60)       label = 'Marine layer';
+  else if (c.pathBlock >= 50) label = 'Horizon blocked';
+  else if (c.low >= 30)       label = 'Patchy low clouds';
+  else if (c.mid > 70)        label = 'Thick cloud deck';
+  else if (canvas >= 80)      label = 'Overcast high clouds';
+  else if (canvas >= 15)      label = 'Clouds to catch color';
+  else                        label = 'Clear & golden';
   return { score, label };
 }
 
@@ -660,35 +642,41 @@ async function fetchSunset(dateStr) {
   return new Date(data.results.sunset);
 }
 
-// One multi-location request: every spot plus the offshore point (last).
-async function fetchCloudLayers() {
-  const pts = [...SPOTS, OFFSHORE];
-  const lats = pts.map(p => p.lat).join(',');
-  const lons = pts.map(p => p.lon).join(',');
-  const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&hourly=cloud_cover_low,cloud_cover_mid,cloud_cover_high,weather_code&forecast_days=2&timezone=America%2FLos_Angeles`);
+// One multi-location request: every spot, then each extra point (light-path
+// samples) in order.
+async function fetchCloudLayers(extraPts) {
+  const pts = [...SPOTS, ...extraPts];
+  const lats = pts.map(p => p.lat.toFixed(3)).join(',');
+  const lons = pts.map(p => p.lon.toFixed(3)).join(',');
+  const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&hourly=cloud_cover_low,cloud_cover_mid,cloud_cover_high,weather_code&forecast_days=3&timezone=America%2FLos_Angeles`);
   if (!r.ok) throw new Error(`Open-Meteo: ${r.status}`);
   return r.json();
 }
 
-// Open-Meteo hourly times are local-ISO hours; round to the nearest hour
-// (sunset color peaks just after the listed sunset minute).
-function omIndexAt(times, date) {
-  const rounded = new Date(date.getTime() + 1800000);
-  const key = rounded.toLocaleString('sv-SE', { timeZone: 'America/Los_Angeles' }).slice(0, 13).replace(' ', 'T') + ':00';
-  return times.indexOf(key);
+// Open-Meteo hourly times are local-ISO hours. Sunset color peaks ~10–20 min
+// after the listed sunset minute, so evaluate there, interpolating between
+// the two surrounding hours.
+function localHourKey(date) {
+  return date.toLocaleString('sv-SE', { timeZone: 'America/Los_Angeles' }).slice(0, 13).replace(' ', 'T') + ':00';
 }
 
 const FOG_CODES = new Set([45, 48]);
+const isRain = (code) => (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95;
 
 function cloudsAt(result, date) {
   const h = result.hourly;
-  const i = omIndexAt(h.time, date);
-  if (i === -1) return null;
+  const t = new Date(date.getTime() + 15 * 60000);
+  const i = h.time.indexOf(localHourKey(t));
+  if (i === -1 || i + 1 >= h.time.length) return null;
+  const f = t.getMinutes() / 60;
+  const lerp = (arr) => Math.round(arr[i] * (1 - f) + arr[i + 1] * f);
+  const code = h.weather_code[f < 0.5 ? i : i + 1];
   return {
-    low: h.cloud_cover_low[i],
-    mid: h.cloud_cover_mid[i],
-    high: h.cloud_cover_high[i],
-    fog: FOG_CODES.has(h.weather_code[i]),
+    low: lerp(h.cloud_cover_low),
+    mid: lerp(h.cloud_cover_mid),
+    high: lerp(h.cloud_cover_high),
+    fog: FOG_CODES.has(code),
+    rain: isRain(code),
   };
 }
 
@@ -709,16 +697,49 @@ const VERDICT_COLORS = {
   'pill-stone':  cssVar('--stone'),
 };
 
-// Bounds tuned to frame all viewpoints with padding. SVG viewBox is 740x1000.
+// Bounds tuned to frame all viewpoints with padding. The SVG's coordinates
+// are Web Mercator pixels at MAP_ZOOM, so CARTO tiles drop in at tile*256.
 const MAP_BOUNDS = { latMin: 32.66, latMax: 33.11, lonMin: -117.35, lonMax: -116.97 };
+const MAP_ZOOM = 11;
+const MAP_STYLE = 'World_Street_Map';
 
 function projectLatLon(lat, lon) {
-  const { latMin, latMax, lonMin, lonMax } = MAP_BOUNDS;
+  const scale = 256 * 2 ** MAP_ZOOM;
+  const s = Math.sin(lat * RAD);
   return {
-    x: ((lon - lonMin) / (lonMax - lonMin)) * 740,
-    y: ((latMax - lat) / (latMax - latMin)) * 1000,
+    x: ((lon + 180) / 360) * scale,
+    y: (0.5 - Math.log((1 + s) / (1 - s)) / (4 * PI)) * scale,
   };
 }
+
+const MAP_TL = projectLatLon(MAP_BOUNDS.latMax, MAP_BOUNDS.lonMin);
+const MAP_BR = projectLatLon(MAP_BOUNDS.latMin, MAP_BOUNDS.lonMax);
+const MAP_W = MAP_BR.x - MAP_TL.x;
+const MAP_K = MAP_W / 740; // pin/label sizes were designed for a 740-wide map
+
+function initMap() {
+  const svg = document.getElementById('mapSvg');
+  const h = MAP_BR.y - MAP_TL.y;
+  svg.setAttribute('viewBox', `${MAP_TL.x} ${MAP_TL.y} ${MAP_W} ${h}`);
+  const water = document.getElementById('mapWater');
+  Object.entries({ x: MAP_TL.x, y: MAP_TL.y, width: MAP_W, height: h })
+    .forEach(([k, v]) => water.setAttribute(k, v));
+  const credit = document.getElementById('mapCredit');
+  credit.setAttribute('x', MAP_BR.x - 4);
+  credit.setAttribute('y', MAP_BR.y - 4);
+
+  // Tiles from one zoom deeper, drawn at half size, so they stay sharp on
+  // retina screens.
+  const z = MAP_ZOOM + 1, size = 128;
+  const tiles = [];
+  for (let tx = Math.floor(MAP_TL.x / size); tx * size < MAP_BR.x; tx++) {
+    for (let ty = Math.floor(MAP_TL.y / size); ty * size < MAP_BR.y; ty++) {
+      tiles.push(`<image href="https://server.arcgisonline.com/ArcGIS/rest/services/${MAP_STYLE}/MapServer/tile/${z}/${ty}/${tx}" x="${tx * size}" y="${ty * size}" width="${size}" height="${size}"/>`);
+    }
+  }
+  document.getElementById('mapTiles').innerHTML = tiles.join('');
+}
+initMap();
 
 // Per-spot label placement overrides when the default (right of pin) doesn't fit.
 const LABEL_POS = {
@@ -731,13 +752,13 @@ function renderMap(spots) {
     const p = projectLatLon(s.lat, s.lon);
     const color = VERDICT_COLORS[s.verdict.klass] || '#9aa3b2';
     const isTop = i === 0;
-    const r = isTop ? 22 : 14;
+    const r = (isTop ? 22 : 14) * MAP_K;
     const glow = isTop
-      ? `<circle cx="${p.x}" cy="${p.y}" r="${r * 1.8}" fill="${color}" opacity="0.25" filter="url(#pin-glow)"/>`
+      ? `<circle cx="${p.x}" cy="${p.y}" r="${r * 1.8}" fill="${color}" opacity="0.35" filter="url(#pin-glow)"/>`
       : '';
 
-    const pos = LABEL_POS[s.name] || (p.x > 600 ? 'left' : 'right');
-    const gap = isTop ? 36 : 26;
+    const pos = LABEL_POS[s.name] || (p.x - MAP_TL.x > 600 * MAP_K ? 'left' : 'right');
+    const gap = (isTop ? 36 : 26) * MAP_K;
     const labelX = pos === 'left' ? p.x - gap : p.x + gap;
     const anchor = pos === 'left' ? 'end' : 'start';
 
@@ -745,7 +766,7 @@ function renderMap(spots) {
       ${glow}
       <circle class="pin" cx="${p.x}" cy="${p.y}" r="${r}"
               fill="${color}"
-              stroke="rgba(15, 10, 20, 0.6)" stroke-width="2"
+              stroke="rgba(15, 10, 20, 0.7)" stroke-width="${2 * MAP_K}"
               data-idx="${i}">
         <title>${s.name} — ${s.verdict.label}</title>
       </circle>
@@ -775,13 +796,19 @@ function loadSatellite() {
   document.getElementById('satImg').style.backgroundImage = `url("${url}")`;
 }
 
-function computeSpots(sunsetTime, cloudData) {
-  const offshore = cloudsAt(cloudData[cloudData.length - 1], sunsetTime);
+// pathData: Open-Meteo results for this sunset's light-path points.
+function computeSpots(sunsetTime, cloudData, pathData) {
+  let pathBlock = 0;
+  pathData.forEach((r, k) => {
+    const c = cloudsAt(r, sunsetTime);
+    if (c) pathBlock += PATH_WEIGHTS[k] * pathOpacity(c);
+  });
+  pathBlock = Math.round(pathBlock);
   return SPOTS
     .map((s, i) => {
       const c = cloudsAt(cloudData[i], sunsetTime);
       if (!c) return null;
-      c.offshoreLow = offshore ? offshore.low : 0;
+      c.pathBlock = pathBlock;
       const { score, label } = scoreSunset(c);
       const grade = gradeFromScore(score);
       return { ...s, clouds: c, score, grade, verdict: { label, klass: GRADE_KLASS[grade] } };
@@ -807,7 +834,7 @@ function renderList(spots) {
           <div class="spot-name">${s.name}</div>
           <div class="meta">
             <span class="pill ${s.verdict.klass}">${s.verdict.label}</span>
-            <span class="meta-pct">${s.clouds.high}% high · ${s.clouds.low}% low</span>
+            <span class="meta-pct">${s.clouds.high}% high · ${s.clouds.mid}% mid · ${s.clouds.low}% low</span>
             <a class="directions" href="${mapUrl}" target="_blank" rel="noopener">Directions ↗</a>
             ${s.cam ? `<a class="directions" href="${s.cam.url}" target="_blank" rel="noopener">📹 Webcam ↗</a>` : ''}
           </div>
@@ -857,16 +884,19 @@ async function load() {
     fetchSunset(isoDate(tomorrow)),
   ]);
 
-  const cloudData = await fetchCloudLayers();
+  const todayPath = pathPoints(sunsetAzimuth(todaySunset));
+  const tomorrowPath = pathPoints(sunsetAzimuth(tomorrowSunset));
+  const cloudData = await fetchCloudLayers([...todayPath, ...tomorrowPath]);
+  const n = SPOTS.length, p = PATH_KM.length;
 
   DAY_DATA.today = {
     sunset: todaySunset,
-    spots: computeSpots(todaySunset, cloudData),
+    spots: computeSpots(todaySunset, cloudData, cloudData.slice(n, n + p)),
     eyebrow: 'San Diego Sunset Tonight',
   };
   DAY_DATA.tomorrow = {
     sunset: tomorrowSunset,
-    spots: computeSpots(tomorrowSunset, cloudData),
+    spots: computeSpots(tomorrowSunset, cloudData, cloudData.slice(n + p, n + 2 * p)),
     eyebrow: `San Diego Sunset ${weekdayName(tomorrowSunset)}`,
   };
 
@@ -891,15 +921,8 @@ load().catch(err => {
 
 // Sun-on-horizon preview (top right). Sun y-position tracks current sun altitude.
 (function () {
-  const PI = Math.PI, RAD = PI / 180, OBL = RAD * 23.4397;
-  const toDays = (d) => d.getTime() / 86400000 - 0.5 + 2440588 - 2451545;
   function sunAlt(date) {
-    const d = toDays(date);
-    const M = RAD * (357.5291 + 0.98560028 * d);
-    const C = RAD * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2*M) + 0.0003 * Math.sin(3*M));
-    const L = M + C + RAD * 102.9372 + PI;
-    const dec = Math.asin(Math.sin(OBL) * Math.sin(L));
-    const ra = Math.atan2(Math.sin(L) * Math.cos(OBL), Math.cos(L));
+    const { d, dec, ra } = sunEcliptic(date);
     const lat = RAD * SD_LAT, lon = RAD * SD_LON;
     const H = RAD * (280.16 + 360.9856235 * d) + lon - ra;
     return Math.asin(Math.sin(lat) * Math.sin(dec) + Math.cos(lat) * Math.cos(dec) * Math.cos(H));

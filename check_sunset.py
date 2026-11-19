@@ -34,10 +34,39 @@ SPOTS = [
     {'name': 'Del Mar',                 'lat': 32.9700, 'lon': -117.2650},
 ]
 
-# Low clouds ~80 km offshore block the sunlight path before it arrives.
-OFFSHORE = {'lat': 32.85, 'lon': -118.10}
+# Light path: points out along the sunset azimuth. A cloud deck out there
+# blocks the sunlight before it can reach the local cloud canvas.
+PATH_KM = [50, 150, 300]
+PATH_WEIGHTS = [0.4, 0.35, 0.25]
 
 FOG_CODES = {45, 48}
+
+
+def is_rain(code):
+    return 51 <= code <= 67 or 80 <= code <= 82 or code >= 95
+
+
+def sunset_azimuth(when):
+    """Degrees clockwise from north where the sun meets the horizon."""
+    rad = math.pi / 180
+    d = when.timestamp() / 86400 - 0.5 + 2440588 - 2451545
+    m = rad * (357.5291 + 0.98560028 * d)
+    c = rad * (1.9148 * math.sin(m) + 0.02 * math.sin(2 * m) + 0.0003 * math.sin(3 * m))
+    lon = m + c + rad * 102.9372 + math.pi
+    dec = math.asin(math.sin(rad * 23.4397) * math.sin(lon))
+    return 360 - math.acos(math.sin(dec) / math.cos(rad * SD_LAT)) / rad
+
+
+def path_points(az):
+    rad = math.pi / 180
+    return [{
+        'lat': SD_LAT + km / 111 * math.cos(az * rad),
+        'lon': SD_LON + km / (111 * math.cos(SD_LAT * rad)) * math.sin(az * rad),
+    } for km in PATH_KM]
+
+
+def path_opacity(c):
+    return max(c['low'], 0.7 * c['mid'], 0.3 * c['high'])
 
 
 # ── State ────────────────────────────────────────────────────────────
@@ -65,14 +94,14 @@ def fetch_sunset(date_iso):
     return dt.datetime.fromisoformat(r.json()['results']['sunset'].replace('Z', '+00:00'))
 
 
-def fetch_cloud_layers():
-    """One multi-location request: every spot plus the offshore point (last)."""
-    pts = SPOTS + [OFFSHORE]
+def fetch_cloud_layers(extra_pts):
+    """One multi-location request: every spot, then each extra point in order."""
+    pts = SPOTS + extra_pts
     r = requests.get(
         'https://api.open-meteo.com/v1/forecast',
         params={
-            'latitude': ','.join(str(p['lat']) for p in pts),
-            'longitude': ','.join(str(p['lon']) for p in pts),
+            'latitude': ','.join(f"{p['lat']:.3f}" for p in pts),
+            'longitude': ','.join(f"{p['lon']:.3f}" for p in pts),
             'hourly': 'cloud_cover_low,cloud_cover_mid,cloud_cover_high,weather_code',
             'forecast_days': 2,
             'timezone': 'America/Los_Angeles',
@@ -84,37 +113,50 @@ def fetch_cloud_layers():
 
 
 def clouds_at(result, local_dt):
-    """local_dt must already be in America/Los_Angeles; rounds to nearest hour."""
-    rounded = local_dt + dt.timedelta(minutes=30)
-    key = rounded.strftime('%Y-%m-%dT%H:00')
+    """local_dt must already be in America/Los_Angeles. Evaluates 15 min after
+    sunset (peak color), interpolating between the surrounding hours."""
+    t = local_dt + dt.timedelta(minutes=15)
+    key = t.strftime('%Y-%m-%dT%H:00')
     h = result['hourly']
     try:
         i = h['time'].index(key)
     except ValueError:
         return None
+    if i + 1 >= len(h['time']):
+        return None
+    f = t.minute / 60
+    lerp = lambda arr: round(arr[i] * (1 - f) + arr[i + 1] * f)
+    code = h['weather_code'][i if f < 0.5 else i + 1]
     return {
-        'low': h['cloud_cover_low'][i],
-        'mid': h['cloud_cover_mid'][i],
-        'high': h['cloud_cover_high'][i],
-        'fog': h['weather_code'][i] in FOG_CODES,
+        'low': lerp(h['cloud_cover_low']),
+        'mid': lerp(h['cloud_cover_mid']),
+        'high': lerp(h['cloud_cover_high']),
+        'fog': code in FOG_CODES,
+        'rain': is_rain(code),
     }
 
 
 # ── Scoring (mirrors index.html) ─────────────────────────────────────
 def score_sunset(c):
-    canvas = min(100, c['high'] + 0.5 * c['mid'])
-    canvas_score = 100 * math.exp(-((canvas - 65) ** 2) / 4900)
-    blockage = max(c['low'], 0.35 * c['offshore_low'])
-    score = round(canvas_score * (1 - blockage / 100))
+    canvas = 100 - (100 - c['high']) * (100 - c['mid']) / 100
+    canvas_score = 40 + 60 * math.exp(-((canvas - 55) ** 2) / 1600)
+    if c['mid'] > 60:
+        canvas_score *= 1 - 0.5 * (c['mid'] - 60) / 40
+    light = (1 - 0.9 * c['low'] / 100) * (1 - 0.85 * c['path_block'] / 100)
+    score = round(canvas_score * light)
+    if c['rain']:
+        score = min(score, 20)
     if c['fog']:
         score = min(score, 15)
 
     if c['fog']:                    label = 'Fog'
+    elif c['rain']:                 label = 'Rain'
     elif c['low'] >= 60:            label = 'Marine layer'
-    elif c['offshore_low'] >= 60:   label = 'Light blocked offshore'
+    elif c['path_block'] >= 50:     label = 'Horizon blocked'
     elif c['low'] >= 30:            label = 'Patchy low clouds'
+    elif c['mid'] > 70:             label = 'Thick cloud deck'
     elif canvas >= 80:              label = 'Overcast high clouds'
-    elif canvas >= 15:              label = 'High clouds — good color'
+    elif canvas >= 15:              label = 'Clouds to catch color'
     else:                           label = 'Clear & golden'
     return score, label
 
@@ -145,9 +187,13 @@ def main():
     sunset_local = sunset_dt.astimezone(PACIFIC)
     print(f'Sunset {today_iso}: {sunset_local.isoformat()}')
 
-    cloud_data = fetch_cloud_layers()
-    offshore = clouds_at(cloud_data[-1], sunset_local)
-    offshore_low = offshore['low'] if offshore else 0
+    cloud_data = fetch_cloud_layers(path_points(sunset_azimuth(sunset_dt)))
+    path_block = 0
+    for w, result in zip(PATH_WEIGHTS, cloud_data[len(SPOTS):]):
+        pc = clouds_at(result, sunset_local)
+        if pc:
+            path_block += w * path_opacity(pc)
+    path_block = round(path_block)
 
     a_plus = []
     for spot, result in zip(SPOTS, cloud_data):
@@ -155,11 +201,11 @@ def main():
         if c is None:
             print(f"  {spot['name']}: no forecast")
             continue
-        c['offshore_low'] = offshore_low
+        c['path_block'] = path_block
         score, label = score_sunset(c)
         grade = grade_from_score(score)
         print(f"  {spot['name']}: {grade} ({score} — {label}, "
-              f"low {c['low']}% / high {c['high']}%, offshore {offshore_low}%)")
+              f"low {c['low']}% / mid {c['mid']}% / high {c['high']}%, path {path_block}%)")
         if grade == 'A+':
             a_plus.append({'spot': spot['name'], 'score': score})
 
@@ -170,7 +216,7 @@ def main():
     spot_list = ', '.join(r['spot'] for r in a_plus)
     time_str = sunset_local.strftime('%-I:%M%p').lower()
     title = '🌅 A+ sunset tonight'
-    message = f'{spot_list} · sunset {time_str} · high clouds over a clear horizon'
+    message = f'{spot_list} · sunset {time_str} · clouds to catch color, clear horizon'
 
     # Publish via JSON body — HTTP headers are latin-1 only, so emoji-in-title
     # breaks header-style ntfy posts. JSON body is UTF-8.

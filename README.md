@@ -8,27 +8,29 @@ For each evening, ranks 10 SD viewpoints by how good their sunset is likely to b
 
 ## How the grade works
 
-Each spot gets a 0–100 score from Open-Meteo's layered cloud forecast (low / mid / high cover per spot, hourly), evaluated at the hour nearest sunset:
+Each spot gets a 0–100 score from Open-Meteo's layered cloud forecast (low / mid / high cover, hourly), interpolated to ~15 min after sunset when color peaks:
 
 ```
-canvas   = min(100, high + 0.5 × mid)        # clouds that can catch color
-canvas → gaussian peaking at 45% cover        # 0% = bland, 100% = gray overcast
-blockage = max(local low, 0.85 × offshore low)
-score    = canvasScore × (1 − blockage/100)   # capped at 15 if fog
+canvas      = 1 − (1−high)(1−mid)              # combined color-catching cover
+canvasScore = 40 + 60·gauss(canvas; peak 55%)  # clear ≈ C, full thin cirrus ≈ B
+              × cut when mid > 60%             # thick altostratus = gray, not color
+pathBlock   = weighted max(low, 0.7·mid, 0.3·high) at 50/150/300 km along the sunset azimuth
+score       = canvasScore × (1 − 0.9·low) × (1 − 0.85·pathBlock)
+              capped at 20 if rain, 15 if fog
 ```
 
-The offshore term is the interesting bit: sunset color happens when light sneaks *under* the cloud deck from beyond the horizon, so low clouds at a sample point ~80 km west block the show even when the coast itself is clear. Local low clouds (marine layer) hide the horizon directly.
+The light-path term is the interesting bit: sunset color happens when light sneaks *under* the cloud canvas from beyond the horizon, so a cloud deck out along the sunset direction (WSW in winter, WNW in summer) leaves the sky gray even when the coast itself is clear. Local low clouds (marine layer) hide the horizon directly.
 
-Score bands: A+ ≥85, A ≥70, B ≥55, C ≥40, D ≥25, F below. Fully-clear scores ~44 (C) — sunset color needs clouds to catch the light.
+Score bands: A+ ≥85, A ≥70, B ≥55, C ≥40, D ≥25, F below.
 
 ## Stack
 
 Single-file HTML, fully client-side. No build, no dependencies.
 
-- **Open-Meteo forecast API** — keyless, CORS-friendly; one multi-location request covers all 10 spots + the offshore point
+- **Open-Meteo forecast API** — keyless, CORS-friendly; one multi-location request covers all 10 spots + the light-path points
 - **GOES-18 satellite imagery** as a live cloud-check before driving out
 - **Sunrise-sunset.org** for the moment of sunset per day
-- **Inline SVG map** of San Diego with viewpoints positioned by lat/lon
+- **Esri World Street Map tiles** (keyless) drawn into an SVG with viewpoints positioned by Web Mercator lat/lon
 
 ## Sunset alerts
 
