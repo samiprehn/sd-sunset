@@ -34,10 +34,12 @@ SPOTS = [
     {'name': 'Del Mar',                 'lat': 32.9700, 'lon': -117.2650},
 ]
 
-# Light path: points out along the sunset azimuth. A cloud deck out there
-# blocks the sunlight before it can reach the local cloud canvas.
-PATH_KM = [50, 150, 300]
-PATH_WEIGHTS = [0.4, 0.35, 0.25]
+# Light path: points out along the sunset azimuth. A solid deck out there
+# blocks the sunlight before it can reach the cloud canvas; patchy low
+# clouds within ~100 km sit on the visible horizon and light up instead.
+PATH_KM = [25, 50, 100, 150, 200, 300]
+PATH_WEIGHTS = [0.15, 0.25, 0.2, 0.15, 0.15, 0.1]
+HORIZON_KM = {50: 0.4, 100: 0.3}  # visible-horizon weights (local low gets 0.3)
 
 FOG_CODES = {45, 48}
 
@@ -65,8 +67,18 @@ def path_points(az):
     } for km in PATH_KM]
 
 
+def deck(cover, threshold):
+    """0-1: how solid a layer is (broken below threshold, deck at 100%)."""
+    return min(1, max(0, (cover - threshold) / (100 - threshold)))
+
+
+def patchy(low):
+    """How much low cloud reads as lit-up patches; fades as it merges into a deck."""
+    return low if low <= 50 else max(0, 100 - low)
+
+
 def path_opacity(c):
-    return max(c['low'], 0.7 * c['mid'], 0.3 * c['high'])
+    return max(100 * deck(c['low'], 60), 80 * deck(c['mid'], 60), 0.3 * c['high'])
 
 
 # ── State ────────────────────────────────────────────────────────────
@@ -138,11 +150,12 @@ def clouds_at(result, local_dt):
 
 # ── Scoring (mirrors index.html) ─────────────────────────────────────
 def score_sunset(c):
-    canvas = 100 - (100 - c['high']) * (100 - c['mid']) / 100
+    horizon_low = 0.3 * patchy(c['low']) + c['path_patchy']
+    canvas = 100 - (100 - c['high']) * (100 - c['mid']) * (100 - horizon_low) / 1e4
     canvas_score = 40 + 60 * math.exp(-((canvas - 55) ** 2) / 1600)
     if c['mid'] > 60:
         canvas_score *= 1 - 0.5 * (c['mid'] - 60) / 40
-    light = (1 - 0.9 * c['low'] / 100) * (1 - 0.85 * c['path_block'] / 100)
+    light = (1 - 0.95 * deck(c['low'], 50)) * (1 - 0.85 * c['path_block'] / 100)
     score = round(canvas_score * light)
     if c['rain']:
         score = min(score, 20)
@@ -151,11 +164,11 @@ def score_sunset(c):
 
     if c['fog']:                    label = 'Fog'
     elif c['rain']:                 label = 'Rain'
-    elif c['low'] >= 60:            label = 'Marine layer'
+    elif c['low'] >= 75:            label = 'Marine layer'
     elif c['path_block'] >= 50:     label = 'Horizon blocked'
-    elif c['low'] >= 30:            label = 'Patchy low clouds'
     elif c['mid'] > 70:             label = 'Thick cloud deck'
-    elif canvas >= 80:              label = 'Overcast high clouds'
+    elif canvas >= 80:              label = 'Overcast'
+    elif horizon_low >= 15:         label = 'Patchy low clouds to light up'
     elif canvas >= 15:              label = 'Clouds to catch color'
     else:                           label = 'Clear & golden'
     return score, label
@@ -188,11 +201,12 @@ def main():
     print(f'Sunset {today_iso}: {sunset_local.isoformat()}')
 
     cloud_data = fetch_cloud_layers(path_points(sunset_azimuth(sunset_dt)))
-    path_block = 0
-    for w, result in zip(PATH_WEIGHTS, cloud_data[len(SPOTS):]):
+    path_block = path_patchy = 0
+    for km, w, result in zip(PATH_KM, PATH_WEIGHTS, cloud_data[len(SPOTS):]):
         pc = clouds_at(result, sunset_local)
         if pc:
             path_block += w * path_opacity(pc)
+            path_patchy += HORIZON_KM.get(km, 0) * patchy(pc['low'])
     path_block = round(path_block)
 
     a_plus = []
@@ -202,6 +216,7 @@ def main():
             print(f"  {spot['name']}: no forecast")
             continue
         c['path_block'] = path_block
+        c['path_patchy'] = path_patchy
         score, label = score_sunset(c)
         grade = grade_from_score(score)
         print(f"  {spot['name']}: {grade} ({score} — {label}, "

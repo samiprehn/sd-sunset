@@ -11,15 +11,16 @@ For each evening, ranks 10 SD viewpoints by how good their sunset is likely to b
 Each spot gets a 0–100 score from Open-Meteo's layered cloud forecast (low / mid / high cover, hourly), interpolated to ~15 min after sunset when color peaks:
 
 ```
-canvas      = 1 − (1−high)(1−mid)              # combined color-catching cover
-canvasScore = 40 + 60·gauss(canvas; peak 55%)  # clear ≈ C, full thin cirrus ≈ B
-              × cut when mid > 60%             # thick altostratus = gray, not color
-pathBlock   = weighted max(low, 0.7·mid, 0.3·high) at 50/150/300 km along the sunset azimuth
-score       = canvasScore × (1 − 0.9·low) × (1 − 0.85·pathBlock)
+horizonLow  = patchy low cloud (≤50% cover) locally + 50/100 km out   # lights up from below
+canvas      = 1 − (1−high)(1−mid)(1−horizonLow)  # combined color-catching cover
+canvasScore = 40 + 60·gauss(canvas; peak 55%)    # clear ≈ C
+              × cut when mid > 60%               # thick altostratus = gray, not color
+pathBlock   = weighted solid-deck opacity at 25–300 km along the sunset azimuth
+score       = canvasScore × (1 − 0.95·localDeck) × (1 − 0.85·pathBlock)
               capped at 20 if rain, 15 if fog
 ```
 
-The light-path term is the interesting bit: sunset color happens when light sneaks *under* the cloud canvas from beyond the horizon, so a cloud deck out along the sunset direction (WSW in winter, WNW in summer) leaves the sky gray even when the coast itself is clear. Local low clouds (marine layer) hide the horizon directly.
+The light-path term is the interesting bit: sunset color happens when light sneaks *under* the cloud canvas from beyond the horizon, so a solid deck out along the sunset direction (WSW in winter, WNW in summer) leaves the sky gray even when the coast itself is clear. Patchy low clouds are the opposite — they light up from below (Nov 15 2026 was the calibration case). A solid local marine layer hides the horizon directly.
 
 Score bands: A+ ≥85, A ≥70, B ≥55, C ≥40, D ≥25, F below.
 
